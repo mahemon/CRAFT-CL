@@ -112,21 +112,12 @@ python -u ${TRAIN_SCRIPT} \\
   --per_task_bwd_eval
 
 EXIT_CODE=\$?
-echo ""
-echo "════════════════════════════════════════════════════════════════════"
-echo "  Finished at \$(date) with exit code \$EXIT_CODE"
-if [ \$EXIT_CODE -eq 0 ]; then
-    echo "  Analysis artefacts at: \${OUTPUT_DIR}/analysis/"
-    echo "  To re-run analysis only:"
-    echo "    python -m loggerAndAnalyze.craft_analysis \${OUTPUT_DIR}"
-fi
-echo "════════════════════════════════════════════════════════════════════"
 EOF
 }
 
 for BETA in "${BETA_LIST[@]}"; do
     BETA_TAG=$(echo "$BETA" | tr '.' 'p')
-    JOB_NAME="CRAFT_CL_KLroute_R3_evict_beta${BETA_TAG}_llama32_1b"
+    JOB_NAME="CRAFT_llama32_1b"
     echo "Submitting β=${BETA} as job ${JOB_NAME}"
     submit_job "1e-4" "$EPOCHS" "$BETA" "$JOB_NAME"
 done
