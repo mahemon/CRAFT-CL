@@ -1,0 +1,92 @@
+# OS / IDE junk
+.DS_Store
+Thumbs.db
+*.log
+*.tmp
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pkl
+trace_cl_debug/
+trace_cl_results/
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+trace_cl/
+.cache/
+.cache/huggingface/
+LLM-CL-Benchmark_500/
+trace_cl_baselines/
+# C / C++ / C#
+*.obj
+*.exe
+*.dll
+*.so
+*.dylib
+*.lib
+*.out
+*.a
+
+# Java
+*.class
+*.jar
+*.war
+*.ear
+
+
+# Node / JS
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Archives / Compressed files
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.gz
+*.rar
+*.7z
+
+# Large binary/media files
+*.iso
+*.bin
+*.img
+*.apk
+*.msi
+*.deb
+*.rpm
+
+# Videos
+*.mp4
+*.mkv
+*.avi
+*.mov
+*.flv
+*.wmv
+
+# Audio
+*.mp3
+*.wav
+*.flac
+*.aac
+*.ogg
+
+# Disk / database dumps
+*.sql
+*.sqlite
+*.db
+*.bak
+
+dataset/
+wandb/
+official_results/
+
+trace_results/
+TRACE_Benchmark/
+
