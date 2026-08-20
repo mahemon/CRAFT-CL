@@ -1,0 +1,2 @@
+t_idx,k_idx,task_t,task_k,kl_drift_t,bwt_tk,group_t,group_k,is_new_group_t,same_group
+1,0,ScienceQA,FOMC,0.000770,-0.090700,0,0,False,True

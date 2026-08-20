@@ -16,6 +16,9 @@ trace_cl_results/
 .ipynb_checkpoints/
 *.ipynb_checkpoints
 
+*.pt
+__MACOSX/
+*.json
 trace_cl/
 .cache/
 .cache/huggingface/
@@ -30,6 +33,7 @@ trace_cl_baselines/
 *.lib
 *.out
 *.a
+
 
 # Java
 *.class

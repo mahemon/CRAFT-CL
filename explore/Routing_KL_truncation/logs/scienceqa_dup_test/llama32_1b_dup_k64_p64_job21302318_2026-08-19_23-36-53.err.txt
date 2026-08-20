@@ -1,0 +1,12 @@
+Note: Environment variable`HF_TOKEN` is set and is the current active token independently from the token you've just configured.
+Traceback (most recent call last):
+  File "/projects/bfwa/mhossen1/CRAFT-CL/explore/Routing_KL_truncation/train.py", line 3451, in <module>
+    main()
+    ~~~~^^
+  File "/projects/bfwa/mhossen1/CRAFT-CL/explore/Routing_KL_truncation/train.py", line 3448, in main
+    finetune_cl(args)
+    ~~~~~~~~~~~^^^^^^
+  File "/projects/bfwa/mhossen1/CRAFT-CL/explore/Routing_KL_truncation/train.py", line 2394, in finetune_cl
+    assert os.path.exists(train_path), f"Not found: {train_path}"
+           ~~~~~~~~~~~~~~^^^^^^^^^^^^
+AssertionError: Not found: /projects/bfwa/mhossen1/CRAFT-CL/dataset/TRACE_Benchmark/LLM-CL-Benchmark_ScienceQA_split/ScienceQA-A/train.json

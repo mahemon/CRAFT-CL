@@ -1,0 +1,17 @@
+════════════════════════════════════════════════════════════════════
+  Job: CRAFT_CL_stream_f30_llama32_1b_trace8   (SLURM id 21301162, node gpua079.delta.ncsa.illinois.edu)
+  ARM      : f30   f_positions=30   l_positions=0   total=30
+  Routing  : kl_routing  normalize=ratio  thr=0.7  floor=0.01
+  KL anchor: β = 0.3  (normalized KL)
+  Eviction : enabled  severity=1.3  early_steps=30  abs_thresh=1.0
+  Storage  : ALL groupwise (no private T3_l)
+  Stream   : TRACE-8
+  Output   : /projects/bfwa/mhossen1/CRAFT-CL/explore/Stream_ablation/outputs/CRAFT_CL_stream_f30_llama32_1b_trace8_2026-08-19_20-53-28
+  Started  : Wed Aug 19 20:53:28 CDT 2026
+════════════════════════════════════════════════════════════════════
+nnsight is not detected. Please install via 'pip install nnsight' for nnsight backend.
+
+════════════════════════════════════════════════════════════════════
+  Finished at Wed Aug 19 20:53:36 CDT 2026 with exit code 1
+  Results: /projects/bfwa/mhossen1/CRAFT-CL/explore/Stream_ablation/outputs/CRAFT_CL_stream_f30_llama32_1b_trace8_2026-08-19_20-53-28/cl_results.json
+════════════════════════════════════════════════════════════════════

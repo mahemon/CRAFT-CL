@@ -35,6 +35,10 @@ from pyreft import (
     ReftDataCollator,
 )
 
+from agnostic_router import (
+    route_and_load, attach_group_prototype, dump_report as agn_dump_report,
+)
+
 try:
     import peft
     is_peft_available = True
@@ -1257,7 +1261,10 @@ def _build_current_task_probe(train_dataset, tokenizer,
                               max_seq_len: int = 256):
     
     n = min(int(probe_size), len(train_dataset))
-    examples = [train_dataset[i] for i in range(n)]
+    keep = ("input_ids", "attention_mask", "labels",
+            "intervention_locations", "subspaces")
+    examples = [{k: v for k, v in train_dataset[i].items() if k in keep}
+                for i in range(n)]
     print(f"  [task_probe] Built probe from current task "
           f"({n} examples) — no past-task data.")
     collator = ReftDataCollator(data_collator=DataCollatorForSeq2Seq(
@@ -1839,7 +1846,9 @@ class KLRazorController:
 
     @staticmethod
     def _call_intervenable(reft_model, batch):
-        b = dict(batch)
+        keep = ("input_ids", "attention_mask", "labels",
+                "intervention_locations", "subspaces")
+        b = {k: v for k, v in batch.items() if k in keep}
         iv_locs = b.pop("intervention_locations", None)
         b.pop("subspaces", None)
         b["use_cache"] = False
@@ -2056,8 +2065,7 @@ class MoIReftTrainer(ReftTrainerForCausalLM):
         kl_ctrl: Optional[KLRazorController] = getattr(self, "_kl_controller", None)
         if kl_ctrl is None:
             return super().compute_loss(
-                model, inputs, return_outputs=return_outputs,
-                num_items_in_batch=num_items_in_batch)
+                model, inputs, return_outputs=return_outputs)
 
         use_rep_kl = (kl_ctrl.kl_mode == "representation"
                       and kl_ctrl.rep_layer_indices)
@@ -2152,7 +2160,7 @@ class MoIReftTrainer(ReftTrainerForCausalLM):
 
         agem_prj: Optional[AGemShadowProjector] = getattr(self, "_agem_projector", None)
         if agem_prj is None:
-            return super().training_step(model, inputs, num_items_in_batch=num_items_in_batch)
+            return super().training_step(model, inputs)
 
         try:
             prepared_inputs = self._prepare_inputs(inputs)
@@ -2160,13 +2168,13 @@ class MoIReftTrainer(ReftTrainerForCausalLM):
         except torch.cuda.OutOfMemoryError:
             print(f"  [agem] OOM on shadow pass; skipping projection this step.")
             if torch.cuda.is_available(): torch.cuda.empty_cache()
-            return super().training_step(model, inputs, num_items_in_batch=num_items_in_batch)
+            return super().training_step(model, inputs)
         except Exception as e:
             print(f"  [agem] anchor pass failed ({type(e).__name__}: {e}); "
                   f"skipping projection for this step.")
-            return super().training_step(model, inputs, num_items_in_batch=num_items_in_batch)
+            return super().training_step(model, inputs)
 
-        loss = super().training_step(model, inputs, num_items_in_batch=num_items_in_batch)
+        loss = super().training_step(model, inputs)
         agem_prj.project_live_W_grads(anchor_W_grads)
         anchor_W_grads.clear()
         del anchor_W_grads
@@ -2523,7 +2531,7 @@ def finetune_cl(args):
             seed=args.seed, remove_unused_columns=False,
         )
         trainer = MoIReftTrainer(
-            model=reft_model, processing_class=tokenizer,
+            model=reft_model, tokenizer=tokenizer,
             args=tr_args, train_dataset=train_dataset,
             eval_dataset=None, data_collator=data_collator)
         trainer.set_custom_optimizer(optimizer)
@@ -2690,7 +2698,7 @@ def finetune_cl(args):
                 seed=args.seed, remove_unused_columns=False,
             )
             trainer = MoIReftTrainer(
-                model=reft_model, processing_class=tokenizer,
+                model=reft_model, tokenizer=tokenizer,
                 args=tr_args2, train_dataset=train_dataset,
                 eval_dataset=None, data_collator=data_collator)
             trainer.set_custom_optimizer(optimizer)
@@ -2785,6 +2793,11 @@ def finetune_cl(args):
             assigned_gid=assigned_gid, is_new_group=is_new_group,
             kl_final=kl_final)
 
+        if args.inference_router == "prototype":
+            attach_group_prototype(memory, final_gid, base_model,
+                                   train_dataset, tokenizer, args,
+                                   probe_size=args.router_probe_size)
+
         routing_entry = {
             "task":         task_name,
             "gid":          int(final_gid),
@@ -2852,7 +2865,13 @@ def finetune_cl(args):
                     base_model, task_layers, args.rank,
                     intervention_cls, iv_dtype, args)
 
-                loaded = memory.load(eval_reft, task_name=eval_task)
+                loaded = route_and_load(
+                    eval_reft, eval_task, memory, base_model, tokenizer,
+                    args, ev_info["dataset"],
+                    build_reft_fn=lambda: _build_reft_model(
+                        base_model, task_layers, args.rank,
+                        intervention_cls, iv_dtype, args),
+                    teardown_fn=_teardown_reft_model)
                 if not loaded:
                     perf_matrix[task_idx][eval_idx] = 0.0
                     _teardown_reft_model(eval_reft)
@@ -2882,6 +2901,9 @@ def finetune_cl(args):
         if torch.cuda.is_available():
             _mem_after = torch.cuda.memory_allocated() / (1024**3)
             print(f"  [gpu_mem] after backward-eval:  {_mem_after:.2f} GiB allocated")
+
+        if args.inference_router != "oracle":
+            agn_dump_report(args.output_dir)
 
         if task_idx > 0:
             fgt_list = [perf_matrix[j][j] - perf_matrix[task_idx][j]
@@ -2913,7 +2935,13 @@ def finetune_cl(args):
                     base_model, task_layers, args.rank,
                     intervention_cls, iv_dtype, args)
 
-                loaded = memory.load(eval_reft, task_name=eval_task)
+                loaded = route_and_load(
+                    eval_reft, eval_task, memory, base_model, tokenizer,
+                    args, ev_info["dataset"],
+                    build_reft_fn=lambda: _build_reft_model(
+                        base_model, task_layers, args.rank,
+                        intervention_cls, iv_dtype, args),
+                    teardown_fn=_teardown_reft_model)
                 if not loaded:
                     perf_matrix[n_tasks - 1][eval_idx] = 0.0
                     _teardown_reft_model(eval_reft)
@@ -2997,7 +3025,12 @@ def finetune_cl(args):
         "backward_transfer":   bwt,
         "n_groups":            memory.n_groups(),
     }
+    
     results_path = os.path.join(args.output_dir, "cl_results.json")
+
+    with open(results_path, "w") as f:
+        json.dump(cl_results, f, indent=4)
+    print(f"\n Log Results saved → {results_path}")
 
     try:
         from utils.analyze_cl_results import run_analysis
@@ -3005,10 +3038,6 @@ def finetune_cl(args):
     except Exception as e:
         print(f"  [analysis] post-hoc analysis failed "
                 f"({type(e).__name__}: {e}); cl_results.json is still saved.")
-        
-    with open(results_path, "w") as f:
-        json.dump(cl_results, f, indent=4)
-    print(f"\n Log Results saved → {results_path}")
 
     print(f"\n  [post-analysis] Building pairwise trained-weight distance matrix ...")
     analysis = _post_cl_analysis(
@@ -3321,6 +3350,15 @@ def main():
 
     parser.add_argument("--per_task_bwd_eval", action="store_true",
                         help="Evaluate all prior tasks after each training step.")
+    parser.add_argument("--inference_router", type=str, default="oracle",
+                        choices=["oracle", "subspace_energy",
+                                 "perplexity", "prototype"],
+                        help="Group selection at eval time. 'oracle' = "
+                             "task_to_group lookup (default, unchanged); "
+                             "others infer the group from eval data only.")
+    parser.add_argument("--router_probe_size", type=int, default=16,
+                        help="Eval examples used per task-agnostic routing "
+                             "decision.")
 
     args = parser.parse_args()
     col = max(len(k) for k in vars(args)) + 2
@@ -3333,7 +3371,6 @@ def main():
 
     if args.continual_learning:
         finetune_cl(args)
-
 
 if __name__ == "__main__":
     main()
