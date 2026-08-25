@@ -1,5 +1,6 @@
 from html import parser
 import os
+os.environ.setdefault("CUBLAS_WORKSPACE_CONFIG", ":4096:8")  # best-effort: full cuBLAS determinism needs this set before process start; see --deterministic help text
 import copy
 import gc
 import json
@@ -2277,6 +2278,16 @@ def finetune_cl(args):
 
     dtype = dtype_mapping[args.dtype]
     set_seed(args.seed)
+    if bool(getattr(args, "deterministic", False)):
+        torch.use_deterministic_algorithms(True, warn_only=True)
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
+        print("  [determinism] torch.use_deterministic_algorithms(True) "
+              "enabled. For full effect, also export "
+              "CUBLAS_WORKSPACE_CONFIG=:4096:8 before launching python "
+              "(this script sets it defensively at import time too, but "
+              "that can be too late if another library already touched "
+              "CUDA first).")
 
     n_pos    = getattr(args, "n_positions", 9)
     task_pos = f"f{n_pos}+l{n_pos}"
@@ -3216,6 +3227,18 @@ def main():
     parser.add_argument("--eval_dataset",  type=str, default=None)
     parser.add_argument("--model",         type=str, default="meta-llama/Llama-3.2-1B-Instruct")
     parser.add_argument("--seed",          type=int, default=42)
+    parser.add_argument("--deterministic", action="store_true", default=False,
+                        help="Opt-in: enable torch.use_deterministic_algorithms "
+                             "and cudnn.deterministic. Off by default to match "
+                             "original behavior exactly. Turn on when comparing "
+                             "arms that must share an identical routing "
+                             "partition (e.g. Merge_rule_ablation) -- a real "
+                             "run (2026-08-18/19, Gemma-2B-it TRACE-8) showed "
+                             "the overwrite arm discover a DIFFERENT partition "
+                             "(5 groups) than ema/fisher/prototype (6 groups) "
+                             "despite identical --seed/--fixed_intervention_seed, "
+                             "consistent with bf16 GPU nondeterminism nudging "
+                             "a routing decision across the delta boundary.")
     parser.add_argument("--dtype",         type=str,
                         default="bfloat16" if device == "cuda" else "float32")
     parser.add_argument("--max_length",    type=int, default=1024)

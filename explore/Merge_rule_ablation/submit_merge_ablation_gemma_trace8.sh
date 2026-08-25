@@ -43,7 +43,7 @@ EVICT_EARLY_STEPS="30"
 EVICT_ABSOLUTE_THRESHOLD="1.0"
 
 # ─── Merge-rule ablation arms ────────────────────────────────────────────────
-MERGE_RULES=(${MERGE_RULES_OVERRIDE:-overwrite ema fisher prototype})
+MERGE_RULES=(overwrite ema fisher prototype)
 MERGE_EMA_ALPHA="0.5"
 MERGE_FISHER_BATCHES="8"
 
@@ -65,7 +65,7 @@ submit_job() {
 
     sbatch <<EOF
 #!/bin/bash
-#SBATCH --account=bfwa-delta-gpu
+#SBATCH --account=bdpm-delta-gpu
 #SBATCH --partition=gpuA100x4
 #SBATCH --time=23:00:00
 #SBATCH --nodes=1
@@ -181,7 +181,8 @@ python -u ${TRAIN_SCRIPT} \\
   --merge_fisher_batches ${MERGE_FISHER_BATCHES} \\
   \\
   --inference_router oracle \\
-  --router_probe_size 16
+  --router_probe_size 16 \\
+  --deterministic
 
 EXIT_CODE=\$?
 echo ""

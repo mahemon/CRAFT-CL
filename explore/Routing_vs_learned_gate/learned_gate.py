@@ -57,15 +57,35 @@ class LearnedGateRouter:
     """Grows a class per discovered group. Retrains a small linear head
     from scratch on the accumulated (feature, group_id) history whenever
     the number of classes changes, then routes the new task's feature
-    vector by argmax confidence against a threshold."""
+    vector by argmax confidence against a threshold.
+
+    BUGFIX (found on real Delta logs, TRACE-8/Llama-1B, 2026-08-20):
+    softmax over a single class is mathematically always 1.0 regardless
+    of the input, so with the original confidence-only join rule, once
+    the first group exists, EVERY subsequent task computed 100%
+    confidence for "join group 0" no matter how dissimilar its features
+    were -- there was no way to ever open a second group, since opening
+    one requires confidence to fall below threshold, which is
+    structurally impossible with exactly one known class. Observed
+    result: Groups Created = 1 for the entire 8-task TRACE-8 stream,
+    reproducing the All-in-One collapse from Table 1 by accident.
+
+    Fix: join now requires BOTH classifier confidence >= threshold AND
+    cosine similarity to the nearest known class's feature centroid >=
+    novelty_threshold. The second check is independent of the
+    classifier and remains meaningful even with a single known class,
+    since it directly compares the new feature vector against the
+    group's actual stored features rather than a degenerate softmax."""
 
     def __init__(self, hidden_size: int, device: str,
                 confidence_threshold: float = 0.5,
+                novelty_threshold: float = 0.6,
                 lr: float = 1e-2, epochs: int = 300,
                 weight_decay: float = 1e-3):
         self.hidden_size = hidden_size
         self.device = device
         self.confidence_threshold = float(confidence_threshold)
+        self.novelty_threshold = float(novelty_threshold)
         self.lr = float(lr)
         self.epochs = int(epochs)
         self.weight_decay = float(weight_decay)
@@ -92,13 +112,40 @@ class LearnedGateRouter:
         self.classifier = clf
         return last_loss
 
+    def _class_centroids(self) -> Dict[int, torch.Tensor]:
+        by_class: Dict[int, List[torch.Tensor]] = {}
+        for feat, lbl in zip(self.history_feats, self.history_labels):
+            by_class.setdefault(lbl, []).append(feat)
+        return {lbl: torch.stack(feats).mean(dim=0)
+                for lbl, feats in by_class.items()}
+
+    def _max_cosine_to_known(self, feat: torch.Tensor) -> Tuple[int, float]:
+        centroids = self._class_centroids()
+        feat_n = F.normalize(feat.unsqueeze(0), dim=-1)
+        best_gid, best_sim = -1, -1.0
+        for gid, c in centroids.items():
+            sim = float(F.cosine_similarity(
+                feat_n, F.normalize(c.unsqueeze(0), dim=-1)).item())
+            if sim > best_sim:
+                best_gid, best_sim = gid, sim
+        return best_gid, best_sim
+
     def route(self, feat: torch.Tensor
              ) -> Tuple[Optional[int], bool, float, Optional[float]]:
         """Returns (predicted_gid_or_None, is_new_group, confidence,
         refit_train_loss_or_None). First task always opens a new group
-        (no classes to predict from yet)."""
+        (no classes to predict from yet). Join requires classifier
+        confidence AND feature-space novelty checks to both pass."""
         if not self.history_feats:
             return None, True, 0.0, None
+
+        nearest_gid, nearest_sim = self._max_cosine_to_known(feat)
+        if nearest_sim < self.novelty_threshold:
+            # Too dissimilar to anything seen so far -- open a new group
+            # without even consulting the classifier. This is the check
+            # that a single-class softmax could never provide.
+            return None, True, nearest_sim, None
+
         n_classes_now = len(set(self.history_labels))
         refit_loss = None
         if self.classifier is None or self.classifier.out_features != n_classes_now:

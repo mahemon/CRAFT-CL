@@ -1,0 +1,16 @@
+════════════════════════════════════════════════════════════════════
+  Job: CRAFT_CL_merge_fisher_gemma2b_trace8   (SLURM id 21315252, node gpua037.delta.ncsa.illinois.edu)
+  MERGE RULE : fisher
+  Routing  : kl_routing  normalize=ratio  thr=0.7  floor=0.01
+  KL anchor: β = 0.3  (normalized KL)
+  Eviction : enabled  severity=1.3  early_steps=30  abs_thresh=1.0
+  Storage  : ALL groupwise (no private T3_l)
+  Stream   : TRACE-8
+  Output   : /projects/bfwa/mhossen1/CRAFT-CL/Merge_rule_ablation/outputs/CRAFT_CL_merge_fisher_gemma2b_trace8_2026-08-20_18-51-02
+  Started  : Thu Aug 20 18:51:02 CDT 2026
+════════════════════════════════════════════════════════════════════
+
+════════════════════════════════════════════════════════════════════
+  Finished at Thu Aug 20 18:51:02 CDT 2026 with exit code 2
+  Results: /projects/bfwa/mhossen1/CRAFT-CL/Merge_rule_ablation/outputs/CRAFT_CL_merge_fisher_gemma2b_trace8_2026-08-20_18-51-02/cl_results.json
+════════════════════════════════════════════════════════════════════

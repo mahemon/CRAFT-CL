@@ -70,9 +70,9 @@ submit_job() {
 
     sbatch <<EOF
 #!/bin/bash
-#SBATCH --account=bdpm-delta-gpu
+#SBATCH --account=bhot-delta-gpu
 #SBATCH --partition=gpuA100x4
-#SBATCH --time=1-23:00:00
+#SBATCH --time=23:00:00
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=6
 #SBATCH --mem=128G

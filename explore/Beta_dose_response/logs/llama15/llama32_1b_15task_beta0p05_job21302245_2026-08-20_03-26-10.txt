@@ -1,0 +1,2403 @@
+════════════════════════════════════════════════════════════════════
+  Job: CRAFT_CL_betadose_0p05_llama32_1b_15task   (SLURM id 21302245, node gpua067.delta.ncsa.illinois.edu)
+  BETA     : 0.05   (normalized KL; ONLY varied factor)
+  Routing  : kl_routing  normalize=ratio  thr=0.7  floor=0.01
+  Eviction : enabled  severity=1.3  early_steps=30  abs_thresh=1.0
+  Storage  : ALL groupwise (no private T3_l)
+  Stream   : 15-task
+  Output   : /projects/bfwa/mhossen1/CRAFT-CL/explore/Beta_dose_response/outputs/CRAFT_CL_betadose_0p05_llama32_1b_15task_2026-08-20_03-26-10
+  Started  : Thu Aug 20 03:26:10 CDT 2026
+════════════════════════════════════════════════════════════════════
+nnsight is not detected. Please install via 'pip install nnsight' for nnsight backend.
+
+======================================================================
+  CRAFT-CL [Weight-Distance Routing]  --  Config
+======================================================================
+  act_fn                           None
+  add_bias                         False
+  all_groupwise                    True
+  allow_cls_grad                   False
+  batch_size                       4
+  benchmark                        standard_cl
+  causal_warmup_steps              100
+  cicm_normalise_by_n              True
+  cl_benchmark_dir                 /projects/bfwa/mhossen1/CRAFT-CL/dataset/TRACE_Benchmark/LLM-CL-Benchmark_500
+  cl_tasks                         C-STANCE,FOMC,MeetingBank,Py150,ScienceQA,NumGLUE-cm,NumGLUE-ds,20Minuten,dbpedia,amazon,yahoo,agnews,yelp,BoolQA,QQP
+  continual_learning               True
+  data_dir                         ./datasets
+  deep_frac                        0.38
+  disable_reft                     False
+  dropout                          0.0
+  dtype                            bfloat16
+  epochs                           1
+  eval_batch_size                  4
+  eval_dataset                     None
+  fixed_intervention_seed          42
+  flat_aggregator                  vote
+  flat_routing                     True
+  flat_vote_quantile               0.5
+  gradient_accumulation_steps      1
+  grassmann_k                      3
+  greedy_decoding                  False
+  group_alpha                      0.5
+  inference_router                 oracle
+  intervention_type                LoreftIntervention
+  is_wandb                         False
+  kl_adaptive_beta                 False
+  kl_beta                          0.05
+  kl_beta_ceiling                  1.0
+  kl_beta_floor                    0.01
+  kl_early_stop                    True
+  kl_eval_batches                  50
+  kl_evict_absolute_threshold      1.0
+  kl_eviction_early_steps          30
+  kl_eviction_enabled              True
+  kl_eviction_severity_threshold   1.3
+  kl_mode                          output
+  kl_normalize_kl                  True
+  kl_rep_layers                    None
+  kl_rolling_window                20
+  kl_routing_min_dkg               0.01
+  kl_routing_normalize             ratio
+  kl_routing_probe_size            16
+  kl_routing_temperature           2.0
+  kl_routing_threshold             0.7
+  kl_routing_top_k                 64
+  kl_target_contribution           0.5
+  layers                           all
+  logging_steps                    10
+  lora_alpha                       32
+  lora_layers                      all
+  lora_modules                     o_proj
+  lora_rank                        8
+  lr                               0.0002
+  manual_groups                    None
+  manual_routing                   False
+  max_length                       1024
+  max_n_eval_example               None
+  max_n_train_example              None
+  metric_for_best_model            accuracy
+  model                            /projects/bdpm/mhossen1/models/Llama-3.2-1B-Instruct
+  moi                              True
+  n_positions                      15
+  output_dir                       /projects/bfwa/mhossen1/CRAFT-CL/explore/Beta_dose_response/outputs/CRAFT_CL_betadose_0p05_llama32_1b_15task_2026-08-20_03-26-10
+  per_task_bwd_eval                True
+  per_task_epochs                  5,4,7,5,4,5,5,7,5,5,5,5,5,5,5
+  position                         f7+l7
+  probe_drift_metric               wrb
+  probe_drift_normalize            none
+  probe_drift_threshold            0.2
+  probe_drift_weights              0.7,0.2,0.1
+  probe_steps                      20
+  rank                             8
+  router_method                    kl_routing
+  router_probe_size                16
+  save_model                       False
+  schedule                         linear
+  seed                             42
+  shallow_frac                     0.33
+  share_weights                    False
+  task                             None
+  temperature                      None
+  test_split                       validation
+  tier1_alpha                      0.3
+  top_k                            None
+  top_p                            None
+  train_dataset                    None
+  train_on_inputs                  False
+  update_pca_k                     3
+  update_pca_spectrum_w            0.5
+  use_agem                         False
+  use_kl                           True
+  use_lora                         False
+  use_normalized_template          False
+  vote_max_dist                    0.2
+  w_cos_per_iv_weights             0.4,0.3,0.2,0.1
+  w_r_b_weights                    0.7,0.2,0.1
+  wandb_dir                        wandb
+  wandb_name                       reft
+  wandb_proj                       MyReFT
+  warmup_ratio                     0.05
+  warmup_skip_steps                15
+  weight_decay                     0.0
+  weight_distance_normalize        none
+  weight_distance_threshold        0.1
+  weight_distance_tiers            mean_all
+======================================================================
+
+  [logger] All logs reset.
+  Benchmark: standard_cl  tasks=['C-STANCE', 'FOMC', 'MeetingBank', 'Py150', 'ScienceQA', 'NumGLUE-cm', 'NumGLUE-ds', '20Minuten', 'dbpedia', 'amazon', 'yahoo', 'agnews', 'yelp', 'BoolQA', 'QQP']
+  Position: f15+l15  (same for all tasks, N=15)
+  [question_start] header=21 tokens  → f-stream starts at position 22
+Base model FROZEN.
+  [stratify] n=16  T1=5 (layers 0-4)  T2=5 (layers 5-9)  T3=6 (layers 10-15)
+  [build_reft] R restored on 32 layers.
+
+CRAFT-CL [Unified Warmup Routers]:
+  router     : kl_routing
+  flat_route : True  aggregator=vote  vote_max_dist=0.2
+  aggregate  : mean_all    (legacy tier-mode; ignored when flat_routing=True)
+  normalize  : none
+  threshold  : 0.1   (in 'vote' mode this is the minimum vote MARGIN to join, not a distance)
+  fixed_seed : 42  (same LoReFT init for every task)
+  stratify   : T1=5 T2=5 T3=6  (used only for storage/EMA; routing is per-iv flat)
+  position   : f15+l15  (fN+lN, N=15)
+
+Epoch schedule: {'C-STANCE': 5, 'FOMC': 4, 'MeetingBank': 7, 'Py150': 5, 'ScienceQA': 4, 'NumGLUE-cm': 5, 'NumGLUE-ds': 5, '20Minuten': 7, 'dbpedia': 5, 'amazon': 5, 'yahoo': 5, 'agnews': 5, 'yelp': 5, 'BoolQA': 5, 'QQP': 5}
+
+========================================================================
+  CL step 1/15:  C-STANCE  [epochs=5  pos=f15+l15]  (ref=cls)
+========================================================================
+
+loading data for dataset:  /projects/bfwa/mhossen1/CRAFT-CL/dataset/TRACE_Benchmark/LLM-CL-Benchmark_500/C-STANCE/train.json
+  Training samples: 500
+  [label-check] task=C-STANCE  non-masked=2/196 (1.02%)  first 20 label-ids=[32, 128009]
+loading data for dataset:  /projects/bfwa/mhossen1/CRAFT-CL/dataset/TRACE_Benchmark/LLM-CL-Benchmark_500/C-STANCE/eval.json
+  Eval set built: n=100
+
+  [kl_routing] Task 'C-STANCE' against 0 existing group(s)  (warmup_steps=100  probe_size=16  threshold=0.7000  top_k=64  T=2.00  normalize=ratio  min_dkg=0.0100)
+
+  [Phase 1 complete] kl_routing for 'C-STANCE':
+    [no existing groups] → create G0
+
+  [Phase 2] Full training ...
+  [build_reft] R restored on 32 layers.
+  New group — starting from fresh fixed-seed init.
+trainable intervention params: 1,048,832 || trainable model params: 0
+model params: 1,235,814,400 || trainable%: 0.08486970211708166
+  [StratOptim]
+    T1_groupwise        lr=2.00e-04  params=327,760
+    T2_groupwise        lr=2.00e-04  params=327,760
+    T3f_groupwise       lr=2.00e-04  params=196,656
+    T3l_taskwise        lr=2.00e-04  params=196,656
+{'loss': 1.9439, 'grad_norm': 36.32561111450195, 'learning_rate': 6.25e-05, 'epoch': 0.08}
+{'loss': 0.6222, 'grad_norm': 15.45765209197998, 'learning_rate': 0.000125, 'epoch': 0.16}
+{'loss': 0.6274, 'grad_norm': 8.072563171386719, 'learning_rate': 0.0001875, 'epoch': 0.24}
+{'loss': 0.6226, 'grad_norm': 3.623328685760498, 'learning_rate': 0.0001973018549747049, 'epoch': 0.32}
+{'loss': 0.5866, 'grad_norm': 11.283061027526855, 'learning_rate': 0.000193929173693086, 'epoch': 0.4}
+{'loss': 0.6209, 'grad_norm': 10.401816368103027, 'learning_rate': 0.00019055649241146713, 'epoch': 0.48}
+{'loss': 0.7139, 'grad_norm': 13.40583324432373, 'learning_rate': 0.00018718381112984824, 'epoch': 0.56}
+{'loss': 0.6105, 'grad_norm': 3.707296371459961, 'learning_rate': 0.00018381112984822934, 'epoch': 0.64}
+{'loss': 0.6104, 'grad_norm': 5.266392707824707, 'learning_rate': 0.00018043844856661047, 'epoch': 0.72}
+{'loss': 0.5955, 'grad_norm': 1.920684814453125, 'learning_rate': 0.00017706576728499158, 'epoch': 0.8}
+{'loss': 0.5987, 'grad_norm': 3.0878939628601074, 'learning_rate': 0.00017369308600337268, 'epoch': 0.88}
+{'loss': 0.4938, 'grad_norm': 5.951061248779297, 'learning_rate': 0.00017032040472175381, 'epoch': 0.96}
+{'loss': 0.5919, 'grad_norm': 8.505023002624512, 'learning_rate': 0.00016694772344013492, 'epoch': 1.04}
+{'loss': 0.5471, 'grad_norm': 9.04791259765625, 'learning_rate': 0.00016357504215851602, 'epoch': 1.12}
+{'loss': 0.5528, 'grad_norm': 2.3908848762512207, 'learning_rate': 0.00016020236087689715, 'epoch': 1.2}
+{'loss': 0.5306, 'grad_norm': 3.797576904296875, 'learning_rate': 0.00015682967959527826, 'epoch': 1.28}
+{'loss': 0.4853, 'grad_norm': 32.696475982666016, 'learning_rate': 0.00015345699831365936, 'epoch': 1.36}
+{'loss': 0.7015, 'grad_norm': 9.623151779174805, 'learning_rate': 0.0001500843170320405, 'epoch': 1.44}
+{'loss': 0.5184, 'grad_norm': 12.876724243164062, 'learning_rate': 0.0001467116357504216, 'epoch': 1.52}
+{'loss': 0.5877, 'grad_norm': 12.935186386108398, 'learning_rate': 0.0001433389544688027, 'epoch': 1.6}
+{'loss': 0.41, 'grad_norm': 15.312931060791016, 'learning_rate': 0.00013996627318718383, 'epoch': 1.68}
+{'loss': 0.5229, 'grad_norm': 6.98823881149292, 'learning_rate': 0.00013659359190556494, 'epoch': 1.76}
+{'loss': 0.6961, 'grad_norm': 15.971945762634277, 'learning_rate': 0.00013322091062394604, 'epoch': 1.84}
+{'loss': 0.4739, 'grad_norm': 4.226382255554199, 'learning_rate': 0.00012984822934232717, 'epoch': 1.92}
+{'loss': 0.4702, 'grad_norm': 9.902463912963867, 'learning_rate': 0.00012647554806070828, 'epoch': 2.0}
+{'loss': 0.4544, 'grad_norm': 4.902020454406738, 'learning_rate': 0.00012310286677908938, 'epoch': 2.08}
+{'loss': 0.3649, 'grad_norm': 4.8320512771606445, 'learning_rate': 0.0001197301854974705, 'epoch': 2.16}
+{'loss': 0.4245, 'grad_norm': 54.082672119140625, 'learning_rate': 0.0001163575042158516, 'epoch': 2.24}
+{'loss': 0.4315, 'grad_norm': 3.4827539920806885, 'learning_rate': 0.00011298482293423271, 'epoch': 2.32}
+{'loss': 0.4607, 'grad_norm': 8.583660125732422, 'learning_rate': 0.00010961214165261384, 'epoch': 2.4}
+{'loss': 0.4627, 'grad_norm': 12.606513023376465, 'learning_rate': 0.00010623946037099494, 'epoch': 2.48}
+{'loss': 0.4469, 'grad_norm': 14.566568374633789, 'learning_rate': 0.00010286677908937605, 'epoch': 2.56}
+{'loss': 0.4224, 'grad_norm': 9.645097732543945, 'learning_rate': 9.949409780775717e-05, 'epoch': 2.64}
+{'loss': 0.4947, 'grad_norm': 7.54931640625, 'learning_rate': 9.612141652613828e-05, 'epoch': 2.72}
+{'loss': 0.3925, 'grad_norm': 5.1645188331604, 'learning_rate': 9.27487352445194e-05, 'epoch': 2.8}
+{'loss': 0.4946, 'grad_norm': 10.163763999938965, 'learning_rate': 8.93760539629005e-05, 'epoch': 2.88}
+{'loss': 0.3499, 'grad_norm': 4.962120056152344, 'learning_rate': 8.600337268128162e-05, 'epoch': 2.96}
+{'loss': 0.2767, 'grad_norm': 2.647401809692383, 'learning_rate': 8.263069139966274e-05, 'epoch': 3.04}
+{'loss': 0.3185, 'grad_norm': 17.416696548461914, 'learning_rate': 7.925801011804385e-05, 'epoch': 3.12}
+{'loss': 0.2872, 'grad_norm': 3.970827341079712, 'learning_rate': 7.588532883642496e-05, 'epoch': 3.2}
+{'loss': 0.4369, 'grad_norm': 9.689136505126953, 'learning_rate': 7.251264755480608e-05, 'epoch': 3.28}
+{'loss': 0.3579, 'grad_norm': 5.484164714813232, 'learning_rate': 6.913996627318719e-05, 'epoch': 3.36}
+{'loss': 0.267, 'grad_norm': 14.177963256835938, 'learning_rate': 6.57672849915683e-05, 'epoch': 3.44}
+{'loss': 0.3826, 'grad_norm': 13.1807279586792, 'learning_rate': 6.239460370994942e-05, 'epoch': 3.52}
+{'loss': 0.3352, 'grad_norm': 11.814456939697266, 'learning_rate': 5.9021922428330526e-05, 'epoch': 3.6}
+{'loss': 0.3211, 'grad_norm': 19.0050106048584, 'learning_rate': 5.564924114671164e-05, 'epoch': 3.68}
+{'loss': 0.2598, 'grad_norm': 6.5163116455078125, 'learning_rate': 5.2276559865092755e-05, 'epoch': 3.76}
+{'loss': 0.3358, 'grad_norm': 9.492352485656738, 'learning_rate': 4.8903878583473866e-05, 'epoch': 3.84}
+{'loss': 0.2889, 'grad_norm': 5.0691351890563965, 'learning_rate': 4.553119730185498e-05, 'epoch': 3.92}
+{'loss': 0.3126, 'grad_norm': 19.45110321044922, 'learning_rate': 4.215851602023609e-05, 'epoch': 4.0}
+{'loss': 0.1934, 'grad_norm': 6.180612564086914, 'learning_rate': 3.8785834738617206e-05, 'epoch': 4.08}
+{'loss': 0.1218, 'grad_norm': 10.674564361572266, 'learning_rate': 3.541315345699832e-05, 'epoch': 4.16}
+{'loss': 0.4391, 'grad_norm': 36.50562286376953, 'learning_rate': 3.204047217537943e-05, 'epoch': 4.24}
+{'loss': 0.1315, 'grad_norm': 0.4947578012943268, 'learning_rate': 2.8667790893760543e-05, 'epoch': 4.32}
+{'loss': 0.0847, 'grad_norm': 6.164396286010742, 'learning_rate': 2.5295109612141654e-05, 'epoch': 4.4}
+{'loss': 0.0575, 'grad_norm': 3.6625466346740723, 'learning_rate': 2.1922428330522768e-05, 'epoch': 4.48}
+{'loss': 0.4665, 'grad_norm': 36.969024658203125, 'learning_rate': 1.854974704890388e-05, 'epoch': 4.56}
+{'loss': 0.2857, 'grad_norm': 2.0108983516693115, 'learning_rate': 1.5177065767284992e-05, 'epoch': 4.64}
+{'loss': 0.0867, 'grad_norm': 1.6973066329956055, 'learning_rate': 1.1804384485666105e-05, 'epoch': 4.72}
+{'loss': 0.2205, 'grad_norm': 32.3664436340332, 'learning_rate': 8.431703204047219e-06, 'epoch': 4.8}
+{'loss': 0.2196, 'grad_norm': 39.120140075683594, 'learning_rate': 5.059021922428331e-06, 'epoch': 4.88}
+{'loss': 0.4565, 'grad_norm': 18.128690719604492, 'learning_rate': 1.6863406408094434e-06, 'epoch': 4.96}
+{'train_runtime': 166.0773, 'train_samples_per_second': 15.053, 'train_steps_per_second': 3.763, 'train_loss': 0.4495686020851135, 'epoch': 5.0}
+  [grad_cb] C-STANCE: flushed 31 entries  (31 total steps, every 20)  R:×32  W×32
+  [fisher] C-STANCE: F(R)=4.421e-03  F(W)=0.000e+00  F(b)=0.000e+00
+  [memory] Task 'C-STANCE' → G0 [NEW GROUP]  groupwise_ivs=32 (T1+T2+T3_f)  t3l_taskwise_ivs=0 (T3_l)  (now 1 task in G0)
+Directory '/projects/bfwa/mhossen1/CRAFT-CL/explore/Beta_dose_response/outputs/CRAFT_CL_betadose_0p05_llama32_1b_15task_2026-08-20_03-26-10/ckpt_00.C-STANCE.20260820032941004904' already exists.
+  Checkpoint saved → /projects/bfwa/mhossen1/CRAFT-CL/explore/Beta_dose_response/outputs/CRAFT_CL_betadose_0p05_llama32_1b_15task_2026-08-20_03-26-10/ckpt_00.C-STANCE.20260820032941004904
+
+  Backward evaluation after C-STANCE:
+  Task               Score    Forgetting
+  ---------------  -------  ------------
+  [gpu_mem] before backward-eval: 3.32 GiB allocated
+  [build_reft] R restored on 32 layers.
+  C-STANCE score: 0.4500
+  C-STANCE          0.4500    (just trained)
+  [gpu_mem] after backward-eval:  3.32 GiB allocated
+
+========================================================================
+  CL step 2/15:  FOMC  [epochs=4  pos=f15+l15]  (ref=cls)
+========================================================================
+
+loading data for dataset:  /projects/bfwa/mhossen1/CRAFT-CL/dataset/TRACE_Benchmark/LLM-CL-Benchmark_500/FOMC/train.json
+  Training samples: 500
+  [label-check] task=FOMC  non-masked=2/130 (1.54%)  first 20 label-ids=[34, 128009]
+loading data for dataset:  /projects/bfwa/mhossen1/CRAFT-CL/dataset/TRACE_Benchmark/LLM-CL-Benchmark_500/FOMC/eval.json
+  Eval set built: n=100
+
+  [kl_routing] Task 'FOMC' against 1 existing group(s)  (warmup_steps=100  probe_size=16  threshold=0.7000  top_k=64  T=2.00  normalize=ratio  min_dkg=0.0100)
+  [task_probe] Built probe from current task (16 examples) — no past-task data.
+  [build_reft] R restored on 32 layers.
+  [kl_routing] Running warmup (100 steps) on 'FOMC' ...
+{'loss': 3.1887, 'grad_norm': 11.46065902709961, 'learning_rate': 0.00015000000000000001, 'epoch': 0.2}
+{'loss': 1.5345, 'grad_norm': 5.425687789916992, 'learning_rate': 0.0001, 'epoch': 0.4}
+{'loss': 1.1156, 'grad_norm': 6.601540565490723, 'learning_rate': 5e-05, 'epoch': 0.6}
+{'loss': 0.7067, 'grad_norm': 21.728240966796875, 'learning_rate': 0.0, 'epoch': 0.8}
+{'train_runtime': 25.9918, 'train_samples_per_second': 15.389, 'train_steps_per_second': 3.847, 'train_loss': 1.6363811302185058, 'epoch': 0.8}
+  [kl_routing] G0 (n=1, tasks=['C-STANCE']) — forward + KL ...
+  [build_reft] R restored on 32 layers.
+  [kl_routing] G0  D_KG=0.7406
+  [kl_routing] G0  distance(ratio)=1.0000  (D_KG=0.7406  D_KG_max=0.7406)
+  [kl_routing] closest=G0  distance=1.0000  threshold=0.7000  → NEW GROUP
+
+  [Phase 1 complete] kl_routing for 'FOMC':
+    n_existing_groups=1  mode=raw  router=kl_routing  aggregate=?  normalize=?  threshold=0.700
+     gid n_tk     t1_f    t1_l    t2_f    t2_l      raw    norm   tasks
+    -------------------------------------------------------------------
+    G0      1      nan     nan     nan     nan    1.000   1.000   C-STANCE
+    closest=G0  iv_match: agg=0/0
+    → decision: new_group  (assigned_gid=G1)
+
+  [Phase 2] Full training ...
+  [build_reft] R restored on 32 layers.
+  New group — starting from fresh fixed-seed init.
+trainable intervention params: 1,048,832 || trainable model params: 0
+model params: 1,235,814,400 || trainable%: 0.08486970211708166
+  [StratOptim]
+    T1_groupwise        lr=2.00e-04  params=327,760
+    T2_groupwise        lr=2.00e-04  params=327,760
+    T3f_groupwise       lr=2.00e-04  params=196,656
+    T3l_taskwise        lr=2.00e-04  params=196,656
+{'loss': 6.283, 'grad_norm': 51.86726379394531, 'learning_rate': 8e-05, 'epoch': 0.08}
+{'loss': 3.4953, 'grad_norm': 14.940465927124023, 'learning_rate': 0.00016, 'epoch': 0.16}
+{'loss': 3.1147, 'grad_norm': 32.91896057128906, 'learning_rate': 0.00019789473684210526, 'epoch': 0.24}
+{'loss': 1.5897, 'grad_norm': 28.92033576965332, 'learning_rate': 0.0001936842105263158, 'epoch': 0.32}
+{'loss': 1.2772, 'grad_norm': 8.77768325805664, 'learning_rate': 0.00018947368421052632, 'epoch': 0.4}
+{'loss': 1.461, 'grad_norm': 16.389545440673828, 'learning_rate': 0.00018526315789473685, 'epoch': 0.48}
+{'loss': 0.7494, 'grad_norm': 6.750370502471924, 'learning_rate': 0.00018105263157894739, 'epoch': 0.56}
+{'loss': 1.266, 'grad_norm': 3.3956263065338135, 'learning_rate': 0.0001768421052631579, 'epoch': 0.64}
+{'loss': 0.7323, 'grad_norm': 3.177278995513916, 'learning_rate': 0.00017263157894736842, 'epoch': 0.72}
+{'loss': 0.5979, 'grad_norm': 25.95166015625, 'learning_rate': 0.00016842105263157895, 'epoch': 0.8}
+{'loss': 0.5786, 'grad_norm': 5.549091339111328, 'learning_rate': 0.00016421052631578948, 'epoch': 0.88}
+{'loss': 0.5744, 'grad_norm': 2.9697964191436768, 'learning_rate': 0.00016, 'epoch': 0.96}
+{'loss': 0.5754, 'grad_norm': 4.573529243469238, 'learning_rate': 0.00015578947368421052, 'epoch': 1.04}
+{'loss': 0.6157, 'grad_norm': 1.9287521839141846, 'learning_rate': 0.00015157894736842108, 'epoch': 1.12}
+{'loss': 0.5452, 'grad_norm': 2.5946547985076904, 'learning_rate': 0.00014736842105263158, 'epoch': 1.2}
+{'loss': 0.5366, 'grad_norm': 6.920753002166748, 'learning_rate': 0.0001431578947368421, 'epoch': 1.28}
+{'loss': 0.5768, 'grad_norm': 2.3933377265930176, 'learning_rate': 0.00013894736842105264, 'epoch': 1.36}
+{'loss': 0.541, 'grad_norm': 2.4439661502838135, 'learning_rate': 0.00013473684210526317, 'epoch': 1.44}
+{'loss': 1.0113, 'grad_norm': 7.1962480545043945, 'learning_rate': 0.0001305263157894737, 'epoch': 1.52}
+{'loss': 0.5601, 'grad_norm': 3.225754976272583, 'learning_rate': 0.0001263157894736842, 'epoch': 1.6}
+{'loss': 0.8661, 'grad_norm': 1.9289218187332153, 'learning_rate': 0.00012210526315789474, 'epoch': 1.68}
+{'loss': 0.6059, 'grad_norm': 4.6466827392578125, 'learning_rate': 0.00011789473684210525, 'epoch': 1.76}
+{'loss': 0.552, 'grad_norm': 2.172863721847534, 'learning_rate': 0.0001136842105263158, 'epoch': 1.84}
+{'loss': 0.5348, 'grad_norm': 3.7606496810913086, 'learning_rate': 0.00010947368421052633, 'epoch': 1.92}
+{'loss': 0.5707, 'grad_norm': 2.2458741664886475, 'learning_rate': 0.00010526315789473685, 'epoch': 2.0}
+{'loss': 0.4727, 'grad_norm': 1.8500608205795288, 'learning_rate': 0.00010105263157894738, 'epoch': 2.08}
+{'loss': 0.6332, 'grad_norm': 4.372476100921631, 'learning_rate': 9.68421052631579e-05, 'epoch': 2.16}
+{'loss': 0.5848, 'grad_norm': 3.3426568508148193, 'learning_rate': 9.263157894736843e-05, 'epoch': 2.24}
+{'loss': 0.5799, 'grad_norm': 3.93479585647583, 'learning_rate': 8.842105263157894e-05, 'epoch': 2.32}
+{'loss': 0.5233, 'grad_norm': 4.342989444732666, 'learning_rate': 8.421052631578948e-05, 'epoch': 2.4}
+{'loss': 0.5415, 'grad_norm': 3.7783091068267822, 'learning_rate': 8e-05, 'epoch': 2.48}
+{'loss': 0.4874, 'grad_norm': 3.0857343673706055, 'learning_rate': 7.578947368421054e-05, 'epoch': 2.56}
+{'loss': 0.4843, 'grad_norm': 3.2638967037200928, 'learning_rate': 7.157894736842105e-05, 'epoch': 2.64}
+{'loss': 0.549, 'grad_norm': 3.703784942626953, 'learning_rate': 6.736842105263159e-05, 'epoch': 2.72}
+{'loss': 0.5467, 'grad_norm': 4.4999847412109375, 'learning_rate': 6.31578947368421e-05, 'epoch': 2.8}
+{'loss': 0.7319, 'grad_norm': 2.8876774311065674, 'learning_rate': 5.894736842105263e-05, 'epoch': 2.88}
+{'loss': 0.5108, 'grad_norm': 3.1875405311584473, 'learning_rate': 5.4736842105263165e-05, 'epoch': 2.96}
+{'loss': 0.4988, 'grad_norm': 3.6414995193481445, 'learning_rate': 5.052631578947369e-05, 'epoch': 3.04}
+{'loss': 0.4755, 'grad_norm': 2.545424461364746, 'learning_rate': 4.6315789473684214e-05, 'epoch': 3.12}
+{'loss': 0.4221, 'grad_norm': 3.545163631439209, 'learning_rate': 4.210526315789474e-05, 'epoch': 3.2}
+{'loss': 0.4678, 'grad_norm': 5.660872459411621, 'learning_rate': 3.789473684210527e-05, 'epoch': 3.28}
+{'loss': 0.5738, 'grad_norm': 6.474514961242676, 'learning_rate': 3.368421052631579e-05, 'epoch': 3.36}
+{'loss': 0.5049, 'grad_norm': 3.0786259174346924, 'learning_rate': 2.9473684210526314e-05, 'epoch': 3.44}
+{'loss': 0.4976, 'grad_norm': 5.276586532592773, 'learning_rate': 2.5263157894736845e-05, 'epoch': 3.52}
+{'loss': 0.4975, 'grad_norm': 4.650417804718018, 'learning_rate': 2.105263157894737e-05, 'epoch': 3.6}
+{'loss': 0.4783, 'grad_norm': 3.364086627960205, 'learning_rate': 1.6842105263157896e-05, 'epoch': 3.68}
+{'loss': 0.432, 'grad_norm': 3.8890886306762695, 'learning_rate': 1.2631578947368422e-05, 'epoch': 3.76}
+{'loss': 0.7837, 'grad_norm': 5.105923652648926, 'learning_rate': 8.421052631578948e-06, 'epoch': 3.84}
+{'loss': 0.4841, 'grad_norm': 3.4606142044067383, 'learning_rate': 4.210526315789474e-06, 'epoch': 3.92}
+{'loss': 0.3804, 'grad_norm': 4.992628574371338, 'learning_rate': 0.0, 'epoch': 4.0}
+{'train_runtime': 127.7227, 'train_samples_per_second': 15.659, 'train_steps_per_second': 3.915, 'train_loss': 0.8590614166259766, 'epoch': 4.0}
+  [grad_cb] FOMC: flushed 25 entries  (25 total steps, every 20)  R:×32  W×32
+  [fisher] FOMC: F(R)=6.197e-04  F(W)=0.000e+00  F(b)=0.000e+00
+  [memory] Task 'FOMC' → G1 [NEW GROUP]  groupwise_ivs=32 (T1+T2+T3_f)  t3l_taskwise_ivs=0 (T3_l)  (now 1 task in G1)
+Directory '/projects/bfwa/mhossen1/CRAFT-CL/explore/Beta_dose_response/outputs/CRAFT_CL_betadose_0p05_llama32_1b_15task_2026-08-20_03-26-10/ckpt_01.FOMC.20260820033242088395' already exists.
+  Checkpoint saved → /projects/bfwa/mhossen1/CRAFT-CL/explore/Beta_dose_response/outputs/CRAFT_CL_betadose_0p05_llama32_1b_15task_2026-08-20_03-26-10/ckpt_01.FOMC.20260820033242088395
+
+  Backward evaluation after FOMC:
+  Task               Score    Forgetting
+  ---------------  -------  ------------
+  [gpu_mem] before backward-eval: 3.32 GiB allocated
+  [build_reft] R restored on 32 layers.
+  C-STANCE score: 0.4500
+  C-STANCE          0.4500       +0.0000
+  [build_reft] R restored on 32 layers.
+  FOMC score: 0.5900
+  FOMC              0.5900    (just trained)
+  [gpu_mem] after backward-eval:  3.32 GiB allocated
+
+  Mean forgetting: +0.0000
+
+========================================================================
+  CL step 3/15:  MeetingBank  [epochs=7  pos=f15+l15]  (ref=summ)
+========================================================================
+
+loading data for dataset:  /projects/bfwa/mhossen1/CRAFT-CL/dataset/TRACE_Benchmark/LLM-CL-Benchmark_500/MeetingBank/train.json
+  Training samples: 500
+  [label-check] task=MeetingBank  non-masked=85/621 (13.69%)  first 20 label-ids=[68744, 367, 311, 37926, 4409, 10790, 11, 477, 2955, 2176, 11, 311, 22864, 3142, 11, 11930, 11, 323, 10423, 320]
+loading data for dataset:  /projects/bfwa/mhossen1/CRAFT-CL/dataset/TRACE_Benchmark/LLM-CL-Benchmark_500/MeetingBank/eval.json
+  Eval set built: n=100
+
+  [kl_routing] Task 'MeetingBank' against 2 existing group(s)  (warmup_steps=100  probe_size=16  threshold=0.7000  top_k=64  T=2.00  normalize=ratio  min_dkg=0.0100)
+  [task_probe] Built probe from current task (16 examples) — no past-task data.
+  [build_reft] R restored on 32 layers.
+  [kl_routing] Running warmup (100 steps) on 'MeetingBank' ...
+{'loss': 2.9603, 'grad_norm': 4.2726149559021, 'learning_rate': 0.00015000000000000001, 'epoch': 0.2}
+{'loss': 2.8369, 'grad_norm': 1.5150501728057861, 'learning_rate': 0.0001, 'epoch': 0.4}
+{'loss': 2.4433, 'grad_norm': 0.35467296838760376, 'learning_rate': 5e-05, 'epoch': 0.6}
+{'loss': 2.7939, 'grad_norm': 3.9001688957214355, 'learning_rate': 0.0, 'epoch': 0.8}
+{'train_runtime': 41.0561, 'train_samples_per_second': 9.743, 'train_steps_per_second': 2.436, 'train_loss': 2.7585811614990234, 'epoch': 0.8}
+  [kl_routing] G0 (n=1, tasks=['C-STANCE']) — forward + KL ...
+  [build_reft] R restored on 32 layers.
+  [kl_routing] G0  D_KG=0.0024
+  [kl_routing] G1 (n=1, tasks=['FOMC']) — forward + KL ...
+  [build_reft] R restored on 32 layers.
+  [kl_routing] G1  D_KG=0.0230
+  [kl_routing] G0  distance(ratio)=0.1031  (D_KG=0.0024  D_KG_max=0.0230)
+  [kl_routing] G1  distance(ratio)=1.0000  (D_KG=0.0230  D_KG_max=0.0230)
+  [kl_routing] closest=G0  distance=0.1031  raw D_KG=0.0024 < min_dkg=0.0100  → NEW GROUP (no-signal floor triggered)
+
+  [Phase 1 complete] kl_routing for 'MeetingBank':
+    n_existing_groups=2  mode=raw  router=kl_routing  aggregate=?  normalize=?  threshold=0.700
+     gid n_tk     t1_f    t1_l    t2_f    t2_l      raw    norm   tasks
+    -------------------------------------------------------------------
+    G0      1      nan     nan     nan     nan    0.103   0.103   C-STANCE
+    G1      1      nan     nan     nan     nan    1.000   1.000   FOMC
+    closest=G0  iv_match: agg=0/0
+    → decision: new_group  (assigned_gid=G2)
+
+  [Phase 2] Full training ...
+  [build_reft] R restored on 32 layers.
+  New group — starting from fresh fixed-seed init.
+trainable intervention params: 1,048,832 || trainable model params: 0
+model params: 1,235,814,400 || trainable%: 0.08486970211708166
+  [StratOptim]
+    T1_groupwise        lr=2.00e-04  params=327,760
+    T2_groupwise        lr=2.00e-04  params=327,760
+    T3f_groupwise       lr=2.00e-04  params=196,656
+    T3l_taskwise        lr=2.00e-04  params=196,656
+{'loss': 3.1721, 'grad_norm': 0.2860022485256195, 'learning_rate': 4.545454545454546e-05, 'epoch': 0.08}
+{'loss': 2.9496, 'grad_norm': 0.15899550914764404, 'learning_rate': 9.090909090909092e-05, 'epoch': 0.16}
+{'loss': 2.5796, 'grad_norm': 4.074435234069824, 'learning_rate': 0.00013636363636363637, 'epoch': 0.24}
+{'loss': 2.6225, 'grad_norm': 4.5680623054504395, 'learning_rate': 0.00018181818181818183, 'epoch': 0.32}
+{'loss': 3.1024, 'grad_norm': 1.514106035232544, 'learning_rate': 0.00019855595667870037, 'epoch': 0.4}
+{'loss': 2.4161, 'grad_norm': 1.7287300825119019, 'learning_rate': 0.00019614921780986764, 'epoch': 0.48}
+{'loss': 2.2139, 'grad_norm': 6.637796878814697, 'learning_rate': 0.0001937424789410349, 'epoch': 0.56}
+{'loss': 3.0004, 'grad_norm': 6.167661190032959, 'learning_rate': 0.0001913357400722022, 'epoch': 0.64}
+{'loss': 3.102, 'grad_norm': 1.0685311555862427, 'learning_rate': 0.00018892900120336944, 'epoch': 0.72}
+{'loss': 2.3722, 'grad_norm': 5.187652587890625, 'learning_rate': 0.00018652226233453672, 'epoch': 0.8}
+{'loss': 2.5175, 'grad_norm': 3.162419080734253, 'learning_rate': 0.00018411552346570396, 'epoch': 0.88}
+{'loss': 2.4976, 'grad_norm': 2.996439218521118, 'learning_rate': 0.00018170878459687124, 'epoch': 0.96}
+{'loss': 2.6894, 'grad_norm': 1.592921495437622, 'learning_rate': 0.00017930204572803851, 'epoch': 1.04}
+{'loss': 1.9393, 'grad_norm': 4.4063215255737305, 'learning_rate': 0.0001768953068592058, 'epoch': 1.12}
+{'loss': 1.5713, 'grad_norm': 48.72229766845703, 'learning_rate': 0.00017448856799037306, 'epoch': 1.2}
+{'loss': 2.2118, 'grad_norm': 3.140909194946289, 'learning_rate': 0.0001720818291215403, 'epoch': 1.28}
+{'loss': 2.5469, 'grad_norm': 8.298114776611328, 'learning_rate': 0.0001696750902527076, 'epoch': 1.36}
+{'loss': 1.9228, 'grad_norm': 1.941735863685608, 'learning_rate': 0.00016726835138387486, 'epoch': 1.44}
+{'loss': 2.4457, 'grad_norm': 3.063695192337036, 'learning_rate': 0.00016486161251504214, 'epoch': 1.52}
+{'loss': 2.118, 'grad_norm': 2.7505452632904053, 'learning_rate': 0.00016245487364620939, 'epoch': 1.6}
+{'loss': 2.2558, 'grad_norm': 2.0792365074157715, 'learning_rate': 0.00016004813477737666, 'epoch': 1.68}
+{'loss': 1.8761, 'grad_norm': 0.067676842212677, 'learning_rate': 0.0001576413959085439, 'epoch': 1.76}
+{'loss': 2.3169, 'grad_norm': 1.6962850093841553, 'learning_rate': 0.0001552346570397112, 'epoch': 1.84}
+{'loss': 2.553, 'grad_norm': 2.087851047515869, 'learning_rate': 0.00015282791817087846, 'epoch': 1.92}
+{'loss': 2.4379, 'grad_norm': 2.5725700855255127, 'learning_rate': 0.00015042117930204573, 'epoch': 2.0}
+{'loss': 1.8028, 'grad_norm': 0.9948403835296631, 'learning_rate': 0.000148014440433213, 'epoch': 2.08}
+{'loss': 2.2293, 'grad_norm': 0.4462142288684845, 'learning_rate': 0.00014560770156438026, 'epoch': 2.16}
+{'loss': 2.1034, 'grad_norm': 2.291205644607544, 'learning_rate': 0.00014320096269554756, 'epoch': 2.24}
+{'loss': 2.012, 'grad_norm': 0.3954469561576843, 'learning_rate': 0.0001407942238267148, 'epoch': 2.32}
+{'loss': 2.017, 'grad_norm': 2.6586146354675293, 'learning_rate': 0.00013838748495788208, 'epoch': 2.4}
+{'loss': 1.6315, 'grad_norm': 3.17612886428833, 'learning_rate': 0.00013598074608904933, 'epoch': 2.48}
+{'loss': 2.0972, 'grad_norm': 1.462721586227417, 'learning_rate': 0.00013357400722021663, 'epoch': 2.56}
+{'loss': 1.8994, 'grad_norm': 0.4903535842895508, 'learning_rate': 0.00013116726835138388, 'epoch': 2.64}
+{'loss': 1.9144, 'grad_norm': 17.7862491607666, 'learning_rate': 0.00012876052948255115, 'epoch': 2.72}
+{'loss': 2.1623, 'grad_norm': 0.5951936841011047, 'learning_rate': 0.0001263537906137184, 'epoch': 2.8}
+{'loss': 1.8014, 'grad_norm': 1.9626095294952393, 'learning_rate': 0.00012394705174488568, 'epoch': 2.88}
+{'loss': 2.4322, 'grad_norm': 1.6416009664535522, 'learning_rate': 0.00012154031287605297, 'epoch': 2.96}
+{'loss': 2.1536, 'grad_norm': 1.7893071174621582, 'learning_rate': 0.00011913357400722023, 'epoch': 3.04}
+{'loss': 2.0894, 'grad_norm': 0.2784287929534912, 'learning_rate': 0.00011672683513838749, 'epoch': 3.12}
+{'loss': 1.8694, 'grad_norm': 1.0816779136657715, 'learning_rate': 0.00011432009626955475, 'epoch': 3.2}
+{'loss': 2.2646, 'grad_norm': 1.5475451946258545, 'learning_rate': 0.00011191335740072202, 'epoch': 3.28}
+{'loss': 1.6515, 'grad_norm': 0.5548194646835327, 'learning_rate': 0.0001095066185318893, 'epoch': 3.36}
+{'loss': 1.7447, 'grad_norm': 1.2125608921051025, 'learning_rate': 0.00010709987966305657, 'epoch': 3.44}
+{'loss': 1.6944, 'grad_norm': 3.0613207817077637, 'learning_rate': 0.00010469314079422384, 'epoch': 3.52}
+{'loss': 2.2117, 'grad_norm': 62.05766677856445, 'learning_rate': 0.0001022864019253911, 'epoch': 3.6}
+{'loss': 1.7684, 'grad_norm': 4.0180463790893555, 'learning_rate': 9.987966305655837e-05, 'epoch': 3.68}
+{'loss': 1.6377, 'grad_norm': 0.025853144004940987, 'learning_rate': 9.747292418772563e-05, 'epoch': 3.76}
+{'loss': 2.0213, 'grad_norm': 0.4155479669570923, 'learning_rate': 9.506618531889291e-05, 'epoch': 3.84}
+{'loss': 1.5564, 'grad_norm': 1.5616058111190796, 'learning_rate': 9.265944645006017e-05, 'epoch': 3.92}
+{'loss': 1.9372, 'grad_norm': 3.0669143199920654, 'learning_rate': 9.025270758122743e-05, 'epoch': 4.0}
+{'loss': 1.7399, 'grad_norm': 1.322487711906433, 'learning_rate': 8.784596871239471e-05, 'epoch': 4.08}
+{'loss': 1.7316, 'grad_norm': 1.7425392866134644, 'learning_rate': 8.543922984356197e-05, 'epoch': 4.16}
+{'loss': 2.3299, 'grad_norm': 4.708348274230957, 'learning_rate': 8.303249097472924e-05, 'epoch': 4.24}
+{'loss': 1.9364, 'grad_norm': 2.354275703430176, 'learning_rate': 8.062575210589652e-05, 'epoch': 4.32}
+{'loss': 1.9149, 'grad_norm': 1.2366904020309448, 'learning_rate': 7.82190132370638e-05, 'epoch': 4.4}
+{'loss': 1.4135, 'grad_norm': 3.6111202239990234, 'learning_rate': 7.581227436823105e-05, 'epoch': 4.48}
+{'loss': 1.466, 'grad_norm': 2.3995473384857178, 'learning_rate': 7.340553549939832e-05, 'epoch': 4.56}
+{'loss': 1.769, 'grad_norm': 5.012436866760254, 'learning_rate': 7.099879663056559e-05, 'epoch': 4.64}
+{'loss': 2.0395, 'grad_norm': 1.0471268892288208, 'learning_rate': 6.859205776173285e-05, 'epoch': 4.72}
+{'loss': 1.8546, 'grad_norm': 2.2434778213500977, 'learning_rate': 6.618531889290013e-05, 'epoch': 4.8}
+{'loss': 1.6358, 'grad_norm': 18.4246768951416, 'learning_rate': 6.377858002406739e-05, 'epoch': 4.88}
+{'loss': 1.9176, 'grad_norm': 3.0288174152374268, 'learning_rate': 6.137184115523465e-05, 'epoch': 4.96}
+{'loss': 1.7552, 'grad_norm': 1.8037585020065308, 'learning_rate': 5.896510228640193e-05, 'epoch': 5.04}
+{'loss': 2.3756, 'grad_norm': 0.021244851872324944, 'learning_rate': 5.6558363417569194e-05, 'epoch': 5.12}
+{'loss': 1.4635, 'grad_norm': 3.977062463760376, 'learning_rate': 5.415162454873647e-05, 'epoch': 5.2}
+{'loss': 2.0541, 'grad_norm': 2.759711265563965, 'learning_rate': 5.174488567990373e-05, 'epoch': 5.28}
+{'loss': 1.8153, 'grad_norm': 0.012026097625494003, 'learning_rate': 4.9338146811071e-05, 'epoch': 5.36}
+{'loss': 1.4531, 'grad_norm': 2.731173038482666, 'learning_rate': 4.693140794223827e-05, 'epoch': 5.44}
+{'loss': 1.7485, 'grad_norm': 1.4792426824569702, 'learning_rate': 4.452466907340554e-05, 'epoch': 5.52}
+{'loss': 2.3789, 'grad_norm': 4.864689350128174, 'learning_rate': 4.211793020457281e-05, 'epoch': 5.6}
+{'loss': 1.6098, 'grad_norm': 1.0383707284927368, 'learning_rate': 3.971119133574007e-05, 'epoch': 5.68}
+{'loss': 1.5228, 'grad_norm': 0.030187716707587242, 'learning_rate': 3.730445246690734e-05, 'epoch': 5.76}
+{'loss': 1.9553, 'grad_norm': 2.4073283672332764, 'learning_rate': 3.489771359807461e-05, 'epoch': 5.84}
+{'loss': 1.3559, 'grad_norm': 2.0474910736083984, 'learning_rate': 3.249097472924188e-05, 'epoch': 5.92}
+{'loss': 1.5459, 'grad_norm': 2.121035575866699, 'learning_rate': 3.0084235860409147e-05, 'epoch': 6.0}
+{'loss': 1.5094, 'grad_norm': 0.6608148217201233, 'learning_rate': 2.7677496991576412e-05, 'epoch': 6.08}
+{'loss': 1.7934, 'grad_norm': 0.03114616498351097, 'learning_rate': 2.527075812274368e-05, 'epoch': 6.16}
+{'loss': 1.7513, 'grad_norm': 2.42144775390625, 'learning_rate': 2.2864019253910952e-05, 'epoch': 6.24}
+{'loss': 1.5523, 'grad_norm': 9.849185943603516, 'learning_rate': 2.045728038507822e-05, 'epoch': 6.32}
+{'loss': 1.8185, 'grad_norm': 1.8737961053848267, 'learning_rate': 1.805054151624549e-05, 'epoch': 6.4}
+{'loss': 2.0284, 'grad_norm': 2.8732967376708984, 'learning_rate': 1.5643802647412757e-05, 'epoch': 6.48}
+{'loss': 1.5722, 'grad_norm': 0.00040805296157486737, 'learning_rate': 1.3237063778580025e-05, 'epoch': 6.56}
+{'loss': 2.0987, 'grad_norm': 2.329749345779419, 'learning_rate': 1.0830324909747293e-05, 'epoch': 6.64}
+{'loss': 2.2666, 'grad_norm': 1.4498661756515503, 'learning_rate': 8.423586040914561e-06, 'epoch': 6.72}
+{'loss': 1.8867, 'grad_norm': 0.8410908579826355, 'learning_rate': 6.0168471720818295e-06, 'epoch': 6.8}
+{'loss': 1.5285, 'grad_norm': 4.655756950378418, 'learning_rate': 3.6101083032490977e-06, 'epoch': 6.88}
+{'loss': 1.7938, 'grad_norm': 5.111462116241455, 'learning_rate': 1.203369434416366e-06, 'epoch': 6.96}
+{'train_runtime': 360.8692, 'train_samples_per_second': 9.699, 'train_steps_per_second': 2.425, 'train_loss': 2.0245114162990023, 'epoch': 7.0}
+  [grad_cb] MeetingBank: flushed 43 entries  (43 total steps, every 20)  R:×32  W×32
+  [fisher] MeetingBank: F(R)=2.463e-04  F(W)=0.000e+00  F(b)=0.000e+00
+  [memory] Task 'MeetingBank' → G2 [NEW GROUP]  groupwise_ivs=32 (T1+T2+T3_f)  t3l_taskwise_ivs=0 (T3_l)  (now 1 task in G2)
+Directory '/projects/bfwa/mhossen1/CRAFT-CL/explore/Beta_dose_response/outputs/CRAFT_CL_betadose_0p05_llama32_1b_15task_2026-08-20_03-26-10/ckpt_02.MeetingBank.20260820034015640925' already exists.
+  Checkpoint saved → /projects/bfwa/mhossen1/CRAFT-CL/explore/Beta_dose_response/outputs/CRAFT_CL_betadose_0p05_llama32_1b_15task_2026-08-20_03-26-10/ckpt_02.MeetingBank.20260820034015640925
+
+  Backward evaluation after MeetingBank:
+  Task               Score    Forgetting
+  ---------------  -------  ------------
+  [gpu_mem] before backward-eval: 3.32 GiB allocated
+  [build_reft] R restored on 32 layers.
+  C-STANCE score: 0.4500
+  C-STANCE          0.4500       +0.0000
+  [build_reft] R restored on 32 layers.
+  FOMC score: 0.5900
+  FOMC              0.5900       +0.0000
+  [build_reft] R restored on 32 layers.
+  MeetingBank ROUGE-L: 0.1537
+  MeetingBank       0.1537    (just trained)
+  [gpu_mem] after backward-eval:  3.32 GiB allocated
+
+  Mean forgetting: +0.0000
+
+========================================================================
+  CL step 4/15:  Py150  [epochs=5  pos=f15+l15]  (ref=code)
+========================================================================
+
+loading data for dataset:  /projects/bfwa/mhossen1/CRAFT-CL/dataset/TRACE_Benchmark/LLM-CL-Benchmark_500/Py150/train.json
+  Training samples: 500
+  [label-check] task=Py150  non-masked=3/206 (1.46%)  first 20 label-ids=[693, 3082, 128009]
+loading data for dataset:  /projects/bfwa/mhossen1/CRAFT-CL/dataset/TRACE_Benchmark/LLM-CL-Benchmark_500/Py150/eval.json
+  Eval set built: n=100
+
+  [kl_routing] Task 'Py150' against 3 existing group(s)  (warmup_steps=100  probe_size=16  threshold=0.7000  top_k=64  T=2.00  normalize=ratio  min_dkg=0.0100)
+  [task_probe] Built probe from current task (16 examples) — no past-task data.
+  [build_reft] R restored on 32 layers.
+  [kl_routing] Running warmup (100 steps) on 'Py150' ...
+{'loss': 4.9268, 'grad_norm': 0.00036977362469770014, 'learning_rate': 0.00015000000000000001, 'epoch': 0.2}
+{'loss': 4.6524, 'grad_norm': 2.0807976722717285, 'learning_rate': 0.0001, 'epoch': 0.4}
+{'loss': 4.5408, 'grad_norm': 6.571466445922852, 'learning_rate': 5e-05, 'epoch': 0.6}
+{'loss': 4.4822, 'grad_norm': 7.736949443817139, 'learning_rate': 0.0, 'epoch': 0.8}
+{'train_runtime': 37.5253, 'train_samples_per_second': 10.659, 'train_steps_per_second': 2.665, 'train_loss': 4.650555267333984, 'epoch': 0.8}
+  [kl_routing] G0 (n=1, tasks=['C-STANCE']) — forward + KL ...
+  [build_reft] R restored on 32 layers.
+  [kl_routing] G0  D_KG=0.0013
+  [kl_routing] G1 (n=1, tasks=['FOMC']) — forward + KL ...
+  [build_reft] R restored on 32 layers.
+  [kl_routing] G1  D_KG=0.0029
+  [kl_routing] G2 (n=1, tasks=['MeetingBank']) — forward + KL ...
+  [build_reft] R restored on 32 layers.
+  [kl_routing] G2  D_KG=0.0048
+  [kl_routing] G0  distance(ratio)=0.2783  (D_KG=0.0013  D_KG_max=0.0048)
+  [kl_routing] G1  distance(ratio)=0.6001  (D_KG=0.0029  D_KG_max=0.0048)
+  [kl_routing] G2  distance(ratio)=1.0000  (D_KG=0.0048  D_KG_max=0.0048)
+  [kl_routing] closest=G0  distance=0.2783  raw D_KG=0.0013 < min_dkg=0.0100  → NEW GROUP (no-signal floor triggered)
+
+  [Phase 1 complete] kl_routing for 'Py150':
+    n_existing_groups=3  mode=raw  router=kl_routing  aggregate=?  normalize=?  threshold=0.700
+     gid n_tk     t1_f    t1_l    t2_f    t2_l      raw    norm   tasks
+    -------------------------------------------------------------------
+    G0      1      nan     nan     nan     nan    0.278   0.278   C-STANCE
+    G1      1      nan     nan     nan     nan    0.600   0.600   FOMC
+    G2      1      nan     nan     nan     nan    1.000   1.000   MeetingBank
+    closest=G0  iv_match: agg=0/0
+    → decision: new_group  (assigned_gid=G3)
+
+  [Phase 2] Full training ...
+  [build_reft] R restored on 32 layers.
+  New group — starting from fresh fixed-seed init.
+trainable intervention params: 1,048,832 || trainable model params: 0
+model params: 1,235,814,400 || trainable%: 0.08486970211708166
+  [StratOptim]
+    T1_groupwise        lr=2.00e-04  params=327,760
+    T2_groupwise        lr=2.00e-04  params=327,760
+    T3f_groupwise       lr=2.00e-04  params=196,656
+    T3l_taskwise        lr=2.00e-04  params=196,656
+{'loss': 5.1214, 'grad_norm': 14.068052291870117, 'learning_rate': 6.25e-05, 'epoch': 0.08}
+{'loss': 5.0625, 'grad_norm': 5.179050922393799, 'learning_rate': 0.000125, 'epoch': 0.16}
+{'loss': 5.0246, 'grad_norm': 2.47078275680542, 'learning_rate': 0.0001875, 'epoch': 0.24}
+{'loss': 4.3648, 'grad_norm': 10.458760261535645, 'learning_rate': 0.0001973018549747049, 'epoch': 0.32}
+{'loss': 4.6203, 'grad_norm': 2.2031147480010986, 'learning_rate': 0.000193929173693086, 'epoch': 0.4}
+{'loss': 4.7084, 'grad_norm': 7.197058200836182, 'learning_rate': 0.00019055649241146713, 'epoch': 0.48}
+{'loss': 4.6159, 'grad_norm': 4.6806254386901855, 'learning_rate': 0.00018718381112984824, 'epoch': 0.56}
+{'loss': 4.3564, 'grad_norm': 6.879024982452393, 'learning_rate': 0.00018381112984822934, 'epoch': 0.64}
+{'loss': 4.6649, 'grad_norm': 3.3055918216705322, 'learning_rate': 0.00018043844856661047, 'epoch': 0.72}
+{'loss': 4.3674, 'grad_norm': 5.475724697113037, 'learning_rate': 0.00017706576728499158, 'epoch': 0.8}
+{'loss': 4.6455, 'grad_norm': 2.1898210048675537, 'learning_rate': 0.00017369308600337268, 'epoch': 0.88}
+{'loss': 4.3346, 'grad_norm': 6.793709754943848, 'learning_rate': 0.00017032040472175381, 'epoch': 0.96}
+{'loss': 3.658, 'grad_norm': 2.408768653869629, 'learning_rate': 0.00016694772344013492, 'epoch': 1.04}
+{'loss': 4.1793, 'grad_norm': 10.460674285888672, 'learning_rate': 0.00016357504215851602, 'epoch': 1.12}
+{'loss': 4.095, 'grad_norm': 3.173859119415283, 'learning_rate': 0.00016020236087689715, 'epoch': 1.2}
+{'loss': 4.193, 'grad_norm': 3.982922077178955, 'learning_rate': 0.00015682967959527826, 'epoch': 1.28}
+{'loss': 4.0251, 'grad_norm': 0.09663709998130798, 'learning_rate': 0.00015345699831365936, 'epoch': 1.36}
+{'loss': 4.7832, 'grad_norm': 1.5021796226501465, 'learning_rate': 0.0001500843170320405, 'epoch': 1.44}
+{'loss': 4.0583, 'grad_norm': 2.605846881866455, 'learning_rate': 0.0001467116357504216, 'epoch': 1.52}
+{'loss': 4.3362, 'grad_norm': 3.203298807144165, 'learning_rate': 0.0001433389544688027, 'epoch': 1.6}
+{'loss': 3.3235, 'grad_norm': 8.12186050415039, 'learning_rate': 0.00013996627318718383, 'epoch': 1.68}
+{'loss': 4.8097, 'grad_norm': 8.622628211975098, 'learning_rate': 0.00013659359190556494, 'epoch': 1.76}
+{'loss': 4.4222, 'grad_norm': 0.00048204357153736055, 'learning_rate': 0.00013322091062394604, 'epoch': 1.84}
+{'loss': 3.9252, 'grad_norm': 4.1956377029418945, 'learning_rate': 0.00012984822934232717, 'epoch': 1.92}
+{'loss': 3.8096, 'grad_norm': 7.7407941818237305, 'learning_rate': 0.00012647554806070828, 'epoch': 2.0}
+{'loss': 3.7826, 'grad_norm': 2.588474988937378, 'learning_rate': 0.00012310286677908938, 'epoch': 2.08}
+{'loss': 4.7376, 'grad_norm': 8.97988224029541, 'learning_rate': 0.0001197301854974705, 'epoch': 2.16}
+{'loss': 4.2258, 'grad_norm': 3.255828380584717, 'learning_rate': 0.0001163575042158516, 'epoch': 2.24}
+{'loss': 3.6491, 'grad_norm': 4.947046756744385, 'learning_rate': 0.00011298482293423271, 'epoch': 2.32}
+{'loss': 4.6509, 'grad_norm': 0.005923787597566843, 'learning_rate': 0.00010961214165261384, 'epoch': 2.4}
+{'loss': 3.9761, 'grad_norm': 0.010276418179273605, 'learning_rate': 0.00010623946037099494, 'epoch': 2.48}
+{'loss': 2.9931, 'grad_norm': 0.016878612339496613, 'learning_rate': 0.00010286677908937605, 'epoch': 2.56}
+{'loss': 3.6521, 'grad_norm': 8.739733695983887, 'learning_rate': 9.949409780775717e-05, 'epoch': 2.64}
+{'loss': 4.1246, 'grad_norm': 10.931716918945312, 'learning_rate': 9.612141652613828e-05, 'epoch': 2.72}
+{'loss': 4.8887, 'grad_norm': 10.829445838928223, 'learning_rate': 9.27487352445194e-05, 'epoch': 2.8}
+{'loss': 3.5792, 'grad_norm': 2.171254873275757, 'learning_rate': 8.93760539629005e-05, 'epoch': 2.88}
+{'loss': 4.5265, 'grad_norm': 3.6671531200408936, 'learning_rate': 8.600337268128162e-05, 'epoch': 2.96}
+{'loss': 3.5922, 'grad_norm': 0.018244683742523193, 'learning_rate': 8.263069139966274e-05, 'epoch': 3.04}
+{'loss': 3.7452, 'grad_norm': 8.132621765136719, 'learning_rate': 7.925801011804385e-05, 'epoch': 3.12}
+{'loss': 3.7114, 'grad_norm': 5.341037750244141, 'learning_rate': 7.588532883642496e-05, 'epoch': 3.2}
+{'loss': 4.3135, 'grad_norm': 8.495588302612305, 'learning_rate': 7.251264755480608e-05, 'epoch': 3.28}
+{'loss': 3.4771, 'grad_norm': 2.7419824600219727, 'learning_rate': 6.913996627318719e-05, 'epoch': 3.36}
+{'loss': 4.0333, 'grad_norm': 5.666073322296143, 'learning_rate': 6.57672849915683e-05, 'epoch': 3.44}
+{'loss': 3.0599, 'grad_norm': 3.9473788738250732, 'learning_rate': 6.239460370994942e-05, 'epoch': 3.52}
+{'loss': 3.1471, 'grad_norm': 0.0001313331158598885, 'learning_rate': 5.9021922428330526e-05, 'epoch': 3.6}
+{'loss': 4.2071, 'grad_norm': 0.004020585212856531, 'learning_rate': 5.564924114671164e-05, 'epoch': 3.68}
+{'loss': 4.7928, 'grad_norm': 2.6688544750213623, 'learning_rate': 5.2276559865092755e-05, 'epoch': 3.76}
+{'loss': 4.512, 'grad_norm': 0.6112645268440247, 'learning_rate': 4.8903878583473866e-05, 'epoch': 3.84}
+{'loss': 3.7873, 'grad_norm': 0.001003940007649362, 'learning_rate': 4.553119730185498e-05, 'epoch': 3.92}
+{'loss': 4.3164, 'grad_norm': 2.907783031463623, 'learning_rate': 4.215851602023609e-05, 'epoch': 4.0}
+{'loss': 4.1878, 'grad_norm': 1.1114850044250488, 'learning_rate': 3.8785834738617206e-05, 'epoch': 4.08}
+{'loss': 3.7452, 'grad_norm': 1.512711524963379, 'learning_rate': 3.541315345699832e-05, 'epoch': 4.16}
+{'loss': 3.6105, 'grad_norm': 0.00856864359229803, 'learning_rate': 3.204047217537943e-05, 'epoch': 4.24}
+{'loss': 3.6293, 'grad_norm': 7.30885124206543, 'learning_rate': 2.8667790893760543e-05, 'epoch': 4.32}
+{'loss': 3.5042, 'grad_norm': 0.0024625551886856556, 'learning_rate': 2.5295109612141654e-05, 'epoch': 4.4}
+{'loss': 3.5455, 'grad_norm': 3.029902458190918, 'learning_rate': 2.1922428330522768e-05, 'epoch': 4.48}
+{'loss': 4.3834, 'grad_norm': 0.00685844523832202, 'learning_rate': 1.854974704890388e-05, 'epoch': 4.56}
+{'loss': 4.4957, 'grad_norm': 0.003910229075700045, 'learning_rate': 1.5177065767284992e-05, 'epoch': 4.64}
+{'loss': 3.8949, 'grad_norm': 3.157148838043213, 'learning_rate': 1.1804384485666105e-05, 'epoch': 4.72}
+{'loss': 4.7203, 'grad_norm': 5.467171669006348, 'learning_rate': 8.431703204047219e-06, 'epoch': 4.8}
+{'loss': 4.7179, 'grad_norm': 0.002522027585655451, 'learning_rate': 5.059021922428331e-06, 'epoch': 4.88}
+{'loss': 3.839, 'grad_norm': 10.782715797424316, 'learning_rate': 1.6863406408094434e-06, 'epoch': 4.96}
+{'train_runtime': 230.1358, 'train_samples_per_second': 10.863, 'train_steps_per_second': 2.716, 'train_loss': 4.161142077636719, 'epoch': 5.0}
+  [grad_cb] Py150: flushed 31 entries  (31 total steps, every 20)  R:×32  W×32
+  [fisher] Py150: F(R)=5.530e-05  F(W)=0.000e+00  F(b)=0.000e+00
+  [memory] Task 'Py150' → G3 [NEW GROUP]  groupwise_ivs=32 (T1+T2+T3_f)  t3l_taskwise_ivs=0 (T3_l)  (now 1 task in G3)
+Directory '/projects/bfwa/mhossen1/CRAFT-CL/explore/Beta_dose_response/outputs/CRAFT_CL_betadose_0p05_llama32_1b_15task_2026-08-20_03-26-10/ckpt_03.Py150.20260820034937480721' already exists.
+  Checkpoint saved → /projects/bfwa/mhossen1/CRAFT-CL/explore/Beta_dose_response/outputs/CRAFT_CL_betadose_0p05_llama32_1b_15task_2026-08-20_03-26-10/ckpt_03.Py150.20260820034937480721
+
+  Backward evaluation after Py150:
+  Task               Score    Forgetting
+  ---------------  -------  ------------
+  [gpu_mem] before backward-eval: 3.32 GiB allocated
+  [build_reft] R restored on 32 layers.
+  C-STANCE score: 0.4500
+  C-STANCE          0.4500       +0.0000
+  [build_reft] R restored on 32 layers.
+  FOMC score: 0.5900
+  FOMC              0.5900       +0.0000
+  [build_reft] R restored on 32 layers.
+  MeetingBank ROUGE-L: 0.1537
+  MeetingBank       0.1537       +0.0000
+  [build_reft] R restored on 32 layers.
+  Py150 score: 0.4280
+  Py150             0.4280    (just trained)
+  [gpu_mem] after backward-eval:  3.32 GiB allocated
+
+  Mean forgetting: +0.0000
+
+========================================================================
+  CL step 5/15:  ScienceQA  [epochs=4  pos=f15+l15]  (ref=cls)
+========================================================================
+
+loading data for dataset:  /projects/bfwa/mhossen1/CRAFT-CL/dataset/TRACE_Benchmark/LLM-CL-Benchmark_500/ScienceQA/train.json
+  Training samples: 500
+  [label-check] task=ScienceQA  non-masked=321/412 (77.91%)  first 20 label-ids=[32, 198, 30035, 1439, 315, 8982, 527, 4339, 477, 32847, 430, 1005, 4221, 304, 264, 2536, 36885, 477, 19018, 1648]
+loading data for dataset:  /projects/bfwa/mhossen1/CRAFT-CL/dataset/TRACE_Benchmark/LLM-CL-Benchmark_500/ScienceQA/eval.json
+  Eval set built: n=100
+
+  [kl_routing] Task 'ScienceQA' against 4 existing group(s)  (warmup_steps=100  probe_size=16  threshold=0.7000  top_k=64  T=2.00  normalize=ratio  min_dkg=0.0100)
+  [task_probe] Built probe from current task (16 examples) — no past-task data.
+  [build_reft] R restored on 32 layers.
+  [kl_routing] Running warmup (100 steps) on 'ScienceQA' ...
+{'loss': 1.7833, 'grad_norm': 1.2068108320236206, 'learning_rate': 0.00015000000000000001, 'epoch': 0.2}
+{'loss': 1.7398, 'grad_norm': 1.7041820287704468, 'learning_rate': 0.0001, 'epoch': 0.4}
+{'loss': 1.7245, 'grad_norm': 2.010453701019287, 'learning_rate': 5e-05, 'epoch': 0.6}
+{'loss': 1.584, 'grad_norm': 1.341030478477478, 'learning_rate': 0.0, 'epoch': 0.8}
+{'train_runtime': 30.4671, 'train_samples_per_second': 13.129, 'train_steps_per_second': 3.282, 'train_loss': 1.7079062271118164, 'epoch': 0.8}
+  [kl_routing] G0 (n=1, tasks=['C-STANCE']) — forward + KL ...
+  [build_reft] R restored on 32 layers.
+  [kl_routing] G0  D_KG=0.0403
+  [kl_routing] G1 (n=1, tasks=['FOMC']) — forward + KL ...
+  [build_reft] R restored on 32 layers.
+  [kl_routing] G1  D_KG=0.0428
+  [kl_routing] G2 (n=1, tasks=['MeetingBank']) — forward + KL ...
+  [build_reft] R restored on 32 layers.
+  [kl_routing] G2  D_KG=0.0271
+  [kl_routing] G3 (n=1, tasks=['Py150']) — forward + KL ...
+  [build_reft] R restored on 32 layers.
+  [kl_routing] G3  D_KG=0.0224
+  [kl_routing] G0  distance(ratio)=0.9426  (D_KG=0.0403  D_KG_max=0.0428)
+  [kl_routing] G1  distance(ratio)=1.0000  (D_KG=0.0428  D_KG_max=0.0428)
+  [kl_routing] G2  distance(ratio)=0.6332  (D_KG=0.0271  D_KG_max=0.0428)
+  [kl_routing] G3  distance(ratio)=0.5244  (D_KG=0.0224  D_KG_max=0.0428)
+  [kl_routing] closest=G3  distance=0.5244  threshold=0.7000  → JOIN G3
+
+  [Phase 1 complete] kl_routing for 'ScienceQA':
+    n_existing_groups=4  mode=raw  router=kl_routing  aggregate=?  normalize=?  threshold=0.700
+     gid n_tk     t1_f    t1_l    t2_f    t2_l      raw    norm   tasks
+    -------------------------------------------------------------------
+    G0      1      nan     nan     nan     nan    0.943   0.943   C-STANCE
+    G1      1      nan     nan     nan     nan    1.000   1.000   FOMC
+    G2      1      nan     nan     nan     nan    0.633   0.633   MeetingBank
+    G3      1      nan     nan     nan     nan    0.524   0.524   Py150
+    closest=G3  iv_match: agg=0/0
+    → decision: join_G3  (assigned_gid=G3)
+
+  [Phase 2] Full training ...
+  [build_reft] R restored on 32 layers.
+  Warm-starting from group G3.
+trainable intervention params: 1,048,832 || trainable model params: 0
+model params: 1,235,814,400 || trainable%: 0.08486970211708166
+  [StratOptim]
+    T1_groupwise        lr=2.00e-04  params=327,760
+    T2_groupwise        lr=2.00e-04  params=327,760
+    T3f_groupwise       lr=2.00e-04  params=196,656
+    T3l_taskwise        lr=2.00e-04  params=196,656
+  [build_reft] R restored on 32 layers.
+  [KL] Building KL-Razor controller (anchor=G3, 32 groupwise iv-keys, mode=output, β=0.050, normalized, evict).
+{'loss': 2.4019, 'grad_norm': 32.56782150268555, 'learning_rate': 8e-05, 'epoch': 0.08}
+{'loss': 2.0228, 'grad_norm': 8.590642929077148, 'learning_rate': 0.00016, 'epoch': 0.16}
+{'loss': 2.0887, 'grad_norm': 11.16037368774414, 'learning_rate': 0.00019789473684210526, 'epoch': 0.24}
+{'loss': 2.081, 'grad_norm': 4.767560005187988, 'learning_rate': 0.0001936842105263158, 'epoch': 0.32}
+{'loss': 1.9805, 'grad_norm': 2.624453544616699, 'learning_rate': 0.00018947368421052632, 'epoch': 0.4}
+{'loss': 1.7614, 'grad_norm': 1.5210671424865723, 'learning_rate': 0.00018526315789473685, 'epoch': 0.48}
+{'loss': 1.7822, 'grad_norm': 0.8686520457267761, 'learning_rate': 0.00018105263157894739, 'epoch': 0.56}
+{'loss': 1.9481, 'grad_norm': 2.507107734680176, 'learning_rate': 0.0001768421052631579, 'epoch': 0.64}
+{'loss': 1.7303, 'grad_norm': 1.395564079284668, 'learning_rate': 0.00017263157894736842, 'epoch': 0.72}
+{'loss': 1.73, 'grad_norm': 1.1466920375823975, 'learning_rate': 0.00016842105263157895, 'epoch': 0.8}
+{'loss': 1.7514, 'grad_norm': 1.207450032234192, 'learning_rate': 0.00016421052631578948, 'epoch': 0.88}
+{'loss': 1.8951, 'grad_norm': 1.0341265201568604, 'learning_rate': 0.00016, 'epoch': 0.96}
+  [KL] First-epoch done at step 125: KL mean=0.0223 std=0.0228 → early-stop threshold = 0.0450
+  [KL] Early stop at step 126: rolling mean (last 20) = 0.0520 > threshold 0.0450.
+{'train_runtime': 52.8585, 'train_samples_per_second': 37.837, 'train_steps_per_second': 9.459, 'train_loss': 1.9207630532933033, 'epoch': 1.02}
+  [grad_cb] ScienceQA: flushed 6 entries  (6 total steps, every 20)  R:×32  W×32
+  [KL] Phase 2 complete: steps=127  mean_kl=0.0223  tail_kl=0.0520  stop_step=126  threshold=0.0450
+  [KL] Save-time KL_final on val (<=50 batches) = 0.2964  (diagnostic only — no blending)
+  [fisher] ScienceQA: F(R)=3.412e-04  F(W)=0.000e+00  F(b)=0.000e+00
+  [memory] Task 'ScienceQA' → G3 [OVERWRITE — KL-restrained trained W stored as new group state]  groupwise_ivs=32 (T1+T2+T3_f)  t3l_taskwise_ivs=0 (T3_l)  kl_final=0.2964  (now 2 tasks in G3: ['Py150', 'ScienceQA'])
+Directory '/projects/bfwa/mhossen1/CRAFT-CL/explore/Beta_dose_response/outputs/CRAFT_CL_betadose_0p05_llama32_1b_15task_2026-08-20_03-26-10/ckpt_04.ScienceQA.20260820035636315609' already exists.
+  Checkpoint saved → /projects/bfwa/mhossen1/CRAFT-CL/explore/Beta_dose_response/outputs/CRAFT_CL_betadose_0p05_llama32_1b_15task_2026-08-20_03-26-10/ckpt_04.ScienceQA.20260820035636315609
+
+  Backward evaluation after ScienceQA:
+  Task               Score    Forgetting
+  ---------------  -------  ------------
+  [gpu_mem] before backward-eval: 3.32 GiB allocated
+  [build_reft] R restored on 32 layers.
+  C-STANCE score: 0.4500
+  C-STANCE          0.4500       +0.0000
+  [build_reft] R restored on 32 layers.
+  FOMC score: 0.5900
+  FOMC              0.5900       +0.0000
+  [build_reft] R restored on 32 layers.
+  MeetingBank ROUGE-L: 0.1537
+  MeetingBank       0.1537       +0.0000
+  [build_reft] R restored on 32 layers.
+  Py150 score: 0.3714
+  Py150             0.3714       +0.0566
+  [build_reft] R restored on 32 layers.
+  ScienceQA score: 0.6100
+  ScienceQA         0.6100    (just trained)
+  [gpu_mem] after backward-eval:  3.32 GiB allocated
+
+  Mean forgetting: +0.0141
+
+========================================================================
+  CL step 6/15:  NumGLUE-cm  [epochs=5  pos=f15+l15]  (ref=reasoning)
+========================================================================
+
+loading data for dataset:  /projects/bfwa/mhossen1/CRAFT-CL/dataset/TRACE_Benchmark/LLM-CL-Benchmark_500/NumGLUE-cm/train.json
+  Training samples: 500
+  [label-check] task=NumGLUE-cm  non-masked=4/80 (5.00%)  first 20 label-ids=[1114, 13, 2166, 128009]
+loading data for dataset:  /projects/bfwa/mhossen1/CRAFT-CL/dataset/TRACE_Benchmark/LLM-CL-Benchmark_500/NumGLUE-cm/eval.json
+  Eval set built: n=41
+
+  [kl_routing] Task 'NumGLUE-cm' against 4 existing group(s)  (warmup_steps=100  probe_size=16  threshold=0.7000  top_k=64  T=2.00  normalize=ratio  min_dkg=0.0100)
+  [task_probe] Built probe from current task (16 examples) — no past-task data.
+  [build_reft] R restored on 32 layers.
+  [kl_routing] Running warmup (100 steps) on 'NumGLUE-cm' ...
+{'loss': 4.8514, 'grad_norm': 25.039487838745117, 'learning_rate': 0.00015000000000000001, 'epoch': 0.2}
+{'loss': 2.8572, 'grad_norm': 20.54679298400879, 'learning_rate': 0.0001, 'epoch': 0.4}
+{'loss': 2.5801, 'grad_norm': 19.241588592529297, 'learning_rate': 5e-05, 'epoch': 0.6}
+{'loss': 2.3249, 'grad_norm': 20.155961990356445, 'learning_rate': 0.0, 'epoch': 0.8}
+{'train_runtime': 25.2166, 'train_samples_per_second': 15.863, 'train_steps_per_second': 3.966, 'train_loss': 3.1534223556518555, 'epoch': 0.8}
+  [kl_routing] G0 (n=1, tasks=['C-STANCE']) — forward + KL ...
+  [build_reft] R restored on 32 layers.
+  [kl_routing] G0  D_KG=0.8932
+  [kl_routing] G1 (n=1, tasks=['FOMC']) — forward + KL ...
+  [build_reft] R restored on 32 layers.
+  [kl_routing] G1  D_KG=0.3594
+  [kl_routing] G2 (n=1, tasks=['MeetingBank']) — forward + KL ...
+  [build_reft] R restored on 32 layers.
+  [kl_routing] G2  D_KG=0.5928
+  [kl_routing] G3 (n=2, tasks=['Py150', 'ScienceQA']) — forward + KL ...
+  [build_reft] R restored on 32 layers.
+  [kl_routing] G3  D_KG=0.5165
+  [kl_routing] G0  distance(ratio)=1.0000  (D_KG=0.8932  D_KG_max=0.8932)
+  [kl_routing] G1  distance(ratio)=0.4024  (D_KG=0.3594  D_KG_max=0.8932)
+  [kl_routing] G2  distance(ratio)=0.6637  (D_KG=0.5928  D_KG_max=0.8932)
+  [kl_routing] G3  distance(ratio)=0.5783  (D_KG=0.5165  D_KG_max=0.8932)
+  [kl_routing] closest=G1  distance=0.4024  threshold=0.7000  → JOIN G1
+
+  [Phase 1 complete] kl_routing for 'NumGLUE-cm':
+    n_existing_groups=4  mode=raw  router=kl_routing  aggregate=?  normalize=?  threshold=0.700
+     gid n_tk     t1_f    t1_l    t2_f    t2_l      raw    norm   tasks
+    -------------------------------------------------------------------
+    G0      1      nan     nan     nan     nan    1.000   1.000   C-STANCE
+    G1      1      nan     nan     nan     nan    0.402   0.402   FOMC
+    G2      1      nan     nan     nan     nan    0.664   0.664   MeetingBank
+    G3      2      nan     nan     nan     nan    0.578   0.578   Py150,ScienceQA
+    closest=G1  iv_match: agg=0/0
+    → decision: join_G1  (assigned_gid=G1)
+
+  [Phase 2] Full training ...
+  [build_reft] R restored on 32 layers.
+  Warm-starting from group G1.
+trainable intervention params: 1,048,832 || trainable model params: 0
+model params: 1,235,814,400 || trainable%: 0.08486970211708166
+  [StratOptim]
+    T1_groupwise        lr=2.00e-04  params=327,760
+    T2_groupwise        lr=2.00e-04  params=327,760
+    T3f_groupwise       lr=2.00e-04  params=196,656
+    T3l_taskwise        lr=2.00e-04  params=196,656
+  [build_reft] R restored on 32 layers.
+  [KL] Building KL-Razor controller (anchor=G1, 32 groupwise iv-keys, mode=output, β=0.050, normalized, evict).
+{'loss': 5.2065, 'grad_norm': 123.0732421875, 'learning_rate': 6.25e-05, 'epoch': 0.08}
+{'loss': 3.6176, 'grad_norm': 29.452007293701172, 'learning_rate': 0.000125, 'epoch': 0.16}
+{'loss': 2.6653, 'grad_norm': 31.533931732177734, 'learning_rate': 0.0001875, 'epoch': 0.24}
+{'loss': 2.3432, 'grad_norm': 40.604248046875, 'learning_rate': 0.0001973018549747049, 'epoch': 0.32}
+{'loss': 2.4629, 'grad_norm': 14.648244857788086, 'learning_rate': 0.000193929173693086, 'epoch': 0.4}
+{'loss': 2.6662, 'grad_norm': 12.699019432067871, 'learning_rate': 0.00019055649241146713, 'epoch': 0.48}
+{'loss': 1.8829, 'grad_norm': 27.935997009277344, 'learning_rate': 0.00018718381112984824, 'epoch': 0.56}
+{'loss': 2.0693, 'grad_norm': 26.509387969970703, 'learning_rate': 0.00018381112984822934, 'epoch': 0.64}
+{'loss': 2.0205, 'grad_norm': 19.54778289794922, 'learning_rate': 0.00018043844856661047, 'epoch': 0.72}
+{'loss': 2.1135, 'grad_norm': 19.77267074584961, 'learning_rate': 0.00017706576728499158, 'epoch': 0.8}
+{'loss': 2.1012, 'grad_norm': 28.719810485839844, 'learning_rate': 0.00017369308600337268, 'epoch': 0.88}
+{'loss': 1.9907, 'grad_norm': 17.94289207458496, 'learning_rate': 0.00017032040472175381, 'epoch': 0.96}
+  [KL] First-epoch done at step 125: KL mean=0.3071 std=0.3277 → early-stop threshold = 0.6348
+{'loss': 1.7559, 'grad_norm': 20.073104858398438, 'learning_rate': 0.00016694772344013492, 'epoch': 1.04}
+{'loss': 1.6388, 'grad_norm': 17.818580627441406, 'learning_rate': 0.00016357504215851602, 'epoch': 1.12}
+{'loss': 1.6697, 'grad_norm': 14.047511100769043, 'learning_rate': 0.00016020236087689715, 'epoch': 1.2}
+{'loss': 1.4275, 'grad_norm': 52.23995590209961, 'learning_rate': 0.00015682967959527826, 'epoch': 1.28}
+{'loss': 1.8167, 'grad_norm': 15.10623550415039, 'learning_rate': 0.00015345699831365936, 'epoch': 1.36}
+{'loss': 1.7315, 'grad_norm': 20.03659439086914, 'learning_rate': 0.0001500843170320405, 'epoch': 1.44}
+{'loss': 1.481, 'grad_norm': 23.628890991210938, 'learning_rate': 0.0001467116357504216, 'epoch': 1.52}
+{'loss': 1.7618, 'grad_norm': 22.979156494140625, 'learning_rate': 0.0001433389544688027, 'epoch': 1.6}
+{'loss': 1.6524, 'grad_norm': 23.51844024658203, 'learning_rate': 0.00013996627318718383, 'epoch': 1.68}
+  [KL] Early stop at step 214: rolling mean (last 20) = 0.6434 > threshold 0.6348.
+{'train_runtime': 69.0925, 'train_samples_per_second': 36.183, 'train_steps_per_second': 9.046, 'train_loss': 2.177819473798885, 'epoch': 1.72}
+  [grad_cb] NumGLUE-cm: flushed 10 entries  (10 total steps, every 20)  R:×32  W×32
+  [KL] Phase 2 complete: steps=215  mean_kl=0.3758  tail_kl=0.6434  stop_step=214  threshold=0.6348
+  [KL] Save-time KL_final on val (<=50 batches) = 1.5535  (diagnostic only — no blending)
+  [fisher] NumGLUE-cm: F(R)=2.872e-01  F(W)=0.000e+00  F(b)=0.000e+00
+  [memory] Task 'NumGLUE-cm' → G1 [OVERWRITE — KL-restrained trained W stored as new group state]  groupwise_ivs=32 (T1+T2+T3_f)  t3l_taskwise_ivs=0 (T3_l)  kl_final=1.5535  (now 2 tasks in G1: ['FOMC', 'NumGLUE-cm'])
+Directory '/projects/bfwa/mhossen1/CRAFT-CL/explore/Beta_dose_response/outputs/CRAFT_CL_betadose_0p05_llama32_1b_15task_2026-08-20_03-26-10/ckpt_05.NumGLUE-cm.20260820040404351615' already exists.
+  Checkpoint saved → /projects/bfwa/mhossen1/CRAFT-CL/explore/Beta_dose_response/outputs/CRAFT_CL_betadose_0p05_llama32_1b_15task_2026-08-20_03-26-10/ckpt_05.NumGLUE-cm.20260820040404351615
+
+  Backward evaluation after NumGLUE-cm:
+  Task               Score    Forgetting
+  ---------------  -------  ------------
+  [gpu_mem] before backward-eval: 3.32 GiB allocated
+  [build_reft] R restored on 32 layers.
+  C-STANCE score: 0.4500
+  C-STANCE          0.4500       +0.0000
+  [build_reft] R restored on 32 layers.
+  FOMC score: 0.5900
+  FOMC              0.5900       +0.0000
+  [build_reft] R restored on 32 layers.
+  MeetingBank ROUGE-L: 0.1537
+  MeetingBank       0.1537       +0.0000
+  [build_reft] R restored on 32 layers.
+  Py150 score: 0.3714
+  Py150             0.3714       +0.0566
+  [build_reft] R restored on 32 layers.
+  ScienceQA score: 0.6100
+  ScienceQA         0.6100       +0.0000
+  [build_reft] R restored on 32 layers.
+  NumGLUE-cm score: 0.2927
+  NumGLUE-cm        0.2927    (just trained)
+  [gpu_mem] after backward-eval:  3.32 GiB allocated
+
+  Mean forgetting: +0.0113
+
+========================================================================
+  CL step 7/15:  NumGLUE-ds  [epochs=5  pos=f15+l15]  (ref=reasoning)
+========================================================================
+
+loading data for dataset:  /projects/bfwa/mhossen1/CRAFT-CL/dataset/TRACE_Benchmark/LLM-CL-Benchmark_500/NumGLUE-ds/train.json
+  Training samples: 500
+  [label-check] task=NumGLUE-ds  non-masked=2/82 (2.44%)  first 20 label-ids=[16, 128009]
+loading data for dataset:  /projects/bfwa/mhossen1/CRAFT-CL/dataset/TRACE_Benchmark/LLM-CL-Benchmark_500/NumGLUE-ds/eval.json
+  Eval set built: n=100
+
+  [kl_routing] Task 'NumGLUE-ds' against 4 existing group(s)  (warmup_steps=100  probe_size=16  threshold=0.7000  top_k=64  T=2.00  normalize=ratio  min_dkg=0.0100)
+  [task_probe] Built probe from current task (16 examples) — no past-task data.
+  [build_reft] R restored on 32 layers.
+  [kl_routing] Running warmup (100 steps) on 'NumGLUE-ds' ...
+{'loss': 4.6727, 'grad_norm': 33.24721908569336, 'learning_rate': 0.00015000000000000001, 'epoch': 0.2}
+{'loss': 2.376, 'grad_norm': 25.744766235351562, 'learning_rate': 0.0001, 'epoch': 0.4}
+{'loss': 2.0601, 'grad_norm': 6.712556838989258, 'learning_rate': 5e-05, 'epoch': 0.6}
+{'loss': 2.0604, 'grad_norm': 12.5184907913208, 'learning_rate': 0.0, 'epoch': 0.8}
+{'train_runtime': 24.976, 'train_samples_per_second': 16.015, 'train_steps_per_second': 4.004, 'train_loss': 2.7922857284545897, 'epoch': 0.8}
+  [kl_routing] G0 (n=1, tasks=['C-STANCE']) — forward + KL ...
+  [build_reft] R restored on 32 layers.
+  [kl_routing] G0  D_KG=0.6611
+  [kl_routing] G1 (n=2, tasks=['FOMC', 'NumGLUE-cm']) — forward + KL ...
+  [build_reft] R restored on 32 layers.
+  [kl_routing] G1  D_KG=0.4183
+  [kl_routing] G2 (n=1, tasks=['MeetingBank']) — forward + KL ...
+  [build_reft] R restored on 32 layers.
+  [kl_routing] G2  D_KG=0.4468
+  [kl_routing] G3 (n=2, tasks=['Py150', 'ScienceQA']) — forward + KL ...
+  [build_reft] R restored on 32 layers.
+  [kl_routing] G3  D_KG=0.9297
+  [kl_routing] G0  distance(ratio)=0.7111  (D_KG=0.6611  D_KG_max=0.9297)
+  [kl_routing] G1  distance(ratio)=0.4499  (D_KG=0.4183  D_KG_max=0.9297)
+  [kl_routing] G2  distance(ratio)=0.4806  (D_KG=0.4468  D_KG_max=0.9297)
+  [kl_routing] G3  distance(ratio)=1.0000  (D_KG=0.9297  D_KG_max=0.9297)
+  [kl_routing] closest=G1  distance=0.4499  threshold=0.7000  → JOIN G1
+
+  [Phase 1 complete] kl_routing for 'NumGLUE-ds':
+    n_existing_groups=4  mode=raw  router=kl_routing  aggregate=?  normalize=?  threshold=0.700
+     gid n_tk     t1_f    t1_l    t2_f    t2_l      raw    norm   tasks
+    -------------------------------------------------------------------
+    G0      1      nan     nan     nan     nan    0.711   0.711   C-STANCE
+    G1      2      nan     nan     nan     nan    0.450   0.450   FOMC,NumGLUE-cm
+    G2      1      nan     nan     nan     nan    0.481   0.481   MeetingBank
+    G3      2      nan     nan     nan     nan    1.000   1.000   Py150,ScienceQA
+    closest=G1  iv_match: agg=0/0
+    → decision: join_G1  (assigned_gid=G1)
+
+  [Phase 2] Full training ...
+  [build_reft] R restored on 32 layers.
+  Warm-starting from group G1.
+trainable intervention params: 1,048,832 || trainable model params: 0
+model params: 1,235,814,400 || trainable%: 0.08486970211708166
+  [StratOptim]
+    T1_groupwise        lr=2.00e-04  params=327,760
+    T2_groupwise        lr=2.00e-04  params=327,760
+    T3f_groupwise       lr=2.00e-04  params=196,656
+    T3l_taskwise        lr=2.00e-04  params=196,656
+  [build_reft] R restored on 32 layers.
+  [KL] Building KL-Razor controller (anchor=G1, 32 groupwise iv-keys, mode=output, β=0.050, normalized, evict).
+{'loss': 3.1912, 'grad_norm': 136.3140411376953, 'learning_rate': 6.25e-05, 'epoch': 0.08}
+{'loss': 2.4161, 'grad_norm': 200.421142578125, 'learning_rate': 0.000125, 'epoch': 0.16}
+{'loss': 2.5474, 'grad_norm': 10.908114433288574, 'learning_rate': 0.0001875, 'epoch': 0.24}
+{'loss': 2.0149, 'grad_norm': 14.179764747619629, 'learning_rate': 0.0001973018549747049, 'epoch': 0.32}
+{'loss': 2.1704, 'grad_norm': 33.70351791381836, 'learning_rate': 0.000193929173693086, 'epoch': 0.4}
+{'loss': 1.7795, 'grad_norm': 10.997357368469238, 'learning_rate': 0.00019055649241146713, 'epoch': 0.48}
+{'loss': 2.0438, 'grad_norm': 10.974379539489746, 'learning_rate': 0.00018718381112984824, 'epoch': 0.56}
+{'loss': 1.7176, 'grad_norm': 7.254171848297119, 'learning_rate': 0.00018381112984822934, 'epoch': 0.64}
+{'loss': 1.7207, 'grad_norm': 9.956236839294434, 'learning_rate': 0.00018043844856661047, 'epoch': 0.72}
+{'loss': 1.7225, 'grad_norm': 5.6152496337890625, 'learning_rate': 0.00017706576728499158, 'epoch': 0.8}
+{'loss': 1.3975, 'grad_norm': 10.269452095031738, 'learning_rate': 0.00017369308600337268, 'epoch': 0.88}
+{'loss': 1.8853, 'grad_norm': 13.732320785522461, 'learning_rate': 0.00017032040472175381, 'epoch': 0.96}
+  [KL] First-epoch done at step 125: KL mean=0.2134 std=0.1636 → early-stop threshold = 0.3770
+{'loss': 1.5281, 'grad_norm': 12.015905380249023, 'learning_rate': 0.00016694772344013492, 'epoch': 1.04}
+{'loss': 1.3129, 'grad_norm': 7.829356670379639, 'learning_rate': 0.00016357504215851602, 'epoch': 1.12}
+  [KL] Early stop at step 141: rolling mean (last 20) = 0.3786 > threshold 0.3770.
+{'train_runtime': 45.4676, 'train_samples_per_second': 54.984, 'train_steps_per_second': 13.746, 'train_loss': 1.956641113254386, 'epoch': 1.14}
+  [grad_cb] NumGLUE-ds: flushed 7 entries  (7 total steps, every 20)  R:×32  W×32
+  [KL] Phase 2 complete: steps=142  mean_kl=0.2345  tail_kl=0.3786  stop_step=141  threshold=0.3770
+  [KL] Save-time KL_final on val (<=50 batches) = 0.9595  (diagnostic only — no blending)
+  [fisher] NumGLUE-ds: F(R)=8.540e-04  F(W)=0.000e+00  F(b)=0.000e+00
+  [memory] Task 'NumGLUE-ds' → G1 [OVERWRITE — KL-restrained trained W stored as new group state]  groupwise_ivs=32 (T1+T2+T3_f)  t3l_taskwise_ivs=0 (T3_l)  kl_final=0.9595  (now 3 tasks in G1: ['FOMC', 'NumGLUE-cm', 'NumGLUE-ds'])
+Directory '/projects/bfwa/mhossen1/CRAFT-CL/explore/Beta_dose_response/outputs/CRAFT_CL_betadose_0p05_llama32_1b_15task_2026-08-20_03-26-10/ckpt_06.NumGLUE-ds.20260820041115689978' already exists.
+  Checkpoint saved → /projects/bfwa/mhossen1/CRAFT-CL/explore/Beta_dose_response/outputs/CRAFT_CL_betadose_0p05_llama32_1b_15task_2026-08-20_03-26-10/ckpt_06.NumGLUE-ds.20260820041115689978
+
+  Backward evaluation after NumGLUE-ds:
+  Task               Score    Forgetting
+  ---------------  -------  ------------
+  [gpu_mem] before backward-eval: 3.32 GiB allocated
+  [build_reft] R restored on 32 layers.
+  C-STANCE score: 0.4500
+  C-STANCE          0.4500       +0.0000
+  [build_reft] R restored on 32 layers.
+  FOMC score: 0.4800
+  FOMC              0.4800       +0.1100
+  [build_reft] R restored on 32 layers.
+  MeetingBank ROUGE-L: 0.1537
+  MeetingBank       0.1537       +0.0000
+  [build_reft] R restored on 32 layers.
+  Py150 score: 0.3714
+  Py150             0.3714       +0.0566
+  [build_reft] R restored on 32 layers.
+  ScienceQA score: 0.6100
+  ScienceQA         0.6100       +0.0000
+  [build_reft] R restored on 32 layers.
+  NumGLUE-cm score: 0.1220
+  NumGLUE-cm        0.1220       +0.1707
+  [build_reft] R restored on 32 layers.
+  NumGLUE-ds score: 0.3600
+  NumGLUE-ds        0.3600    (just trained)
+  [gpu_mem] after backward-eval:  3.32 GiB allocated
+
+  Mean forgetting: +0.0562
+
+========================================================================
+  CL step 8/15:  20Minuten  [epochs=7  pos=f15+l15]  (ref=summ)
+========================================================================
+
+loading data for dataset:  /projects/bfwa/mhossen1/CRAFT-CL/dataset/TRACE_Benchmark/LLM-CL-Benchmark_500/20Minuten/train.json
+  Training samples: 500
+  [label-check] task=20Minuten  non-masked=64/616 (10.39%)  first 20 label-ids=[644, 89787, 56834, 3213, 800, 31975, 2002, 48750, 1297, 23774, 43441, 43886, 5568, 16852, 92739, 14748, 90830, 13, 8574, 68310]
+loading data for dataset:  /projects/bfwa/mhossen1/CRAFT-CL/dataset/TRACE_Benchmark/LLM-CL-Benchmark_500/20Minuten/eval.json
+  Eval set built: n=100
+
+  [kl_routing] Task '20Minuten' against 4 existing group(s)  (warmup_steps=100  probe_size=16  threshold=0.7000  top_k=64  T=2.00  normalize=ratio  min_dkg=0.0100)
+  [task_probe] Built probe from current task (16 examples) — no past-task data.
+  [build_reft] R restored on 32 layers.
+  [kl_routing] Running warmup (100 steps) on '20Minuten' ...
+{'loss': 2.2587, 'grad_norm': 1.7033703327178955, 'learning_rate': 0.00015000000000000001, 'epoch': 0.2}
+{'loss': 2.292, 'grad_norm': 0.427828311920166, 'learning_rate': 0.0001, 'epoch': 0.4}
+{'loss': 2.2163, 'grad_norm': 0.3153991103172302, 'learning_rate': 5e-05, 'epoch': 0.6}
+{'loss': 2.1953, 'grad_norm': 2.622694492340088, 'learning_rate': 0.0, 'epoch': 0.8}
+{'train_runtime': 40.1245, 'train_samples_per_second': 9.969, 'train_steps_per_second': 2.492, 'train_loss': 2.2405738067626952, 'epoch': 0.8}
+  [kl_routing] G0 (n=1, tasks=['C-STANCE']) — forward + KL ...
+  [build_reft] R restored on 32 layers.
+  [kl_routing] G0  D_KG=0.0545
+  [kl_routing] G1 (n=3, tasks=['FOMC', 'NumGLUE-cm', 'NumGLUE-ds']) — forward + KL ...
+  [build_reft] R restored on 32 layers.
+  [kl_routing] G1  D_KG=0.0581
+  [kl_routing] G2 (n=1, tasks=['MeetingBank']) — forward + KL ...
+  [build_reft] R restored on 32 layers.
+  [kl_routing] G2  D_KG=0.1292
+  [kl_routing] G3 (n=2, tasks=['Py150', 'ScienceQA']) — forward + KL ...
+  [build_reft] R restored on 32 layers.
+  [kl_routing] G3  D_KG=0.0350
+  [kl_routing] G0  distance(ratio)=0.4220  (D_KG=0.0545  D_KG_max=0.1292)
+  [kl_routing] G1  distance(ratio)=0.4496  (D_KG=0.0581  D_KG_max=0.1292)
+  [kl_routing] G2  distance(ratio)=1.0000  (D_KG=0.1292  D_KG_max=0.1292)
+  [kl_routing] G3  distance(ratio)=0.2706  (D_KG=0.0350  D_KG_max=0.1292)
+  [kl_routing] closest=G3  distance=0.2706  threshold=0.7000  → JOIN G3
+
+  [Phase 1 complete] kl_routing for '20Minuten':
+    n_existing_groups=4  mode=raw  router=kl_routing  aggregate=?  normalize=?  threshold=0.700
+     gid n_tk     t1_f    t1_l    t2_f    t2_l      raw    norm   tasks
+    -------------------------------------------------------------------
+    G0      1      nan     nan     nan     nan    0.422   0.422   C-STANCE
+    G1      3      nan     nan     nan     nan    0.450   0.450   FOMC,NumGLUE-cm,NumGLUE-ds
+    G2      1      nan     nan     nan     nan    1.000   1.000   MeetingBank
+    G3      2      nan     nan     nan     nan    0.271   0.271   Py150,ScienceQA
+    closest=G3  iv_match: agg=0/0
+    → decision: join_G3  (assigned_gid=G3)
+
+  [Phase 2] Full training ...
+  [build_reft] R restored on 32 layers.
+  Warm-starting from group G3.
+trainable intervention params: 1,048,832 || trainable model params: 0
+model params: 1,235,814,400 || trainable%: 0.08486970211708166
+  [StratOptim]
+    T1_groupwise        lr=2.00e-04  params=327,760
+    T2_groupwise        lr=2.00e-04  params=327,760
+    T3f_groupwise       lr=2.00e-04  params=196,656
+    T3l_taskwise        lr=2.00e-04  params=196,656
+  [build_reft] R restored on 32 layers.
+  [KL] Building KL-Razor controller (anchor=G3, 32 groupwise iv-keys, mode=output, β=0.050, normalized, evict).
+{'loss': 2.3105, 'grad_norm': 48.35799026489258, 'learning_rate': 4.545454545454546e-05, 'epoch': 0.08}
+{'loss': 2.2818, 'grad_norm': 5.579574108123779, 'learning_rate': 9.090909090909092e-05, 'epoch': 0.16}
+{'loss': 2.4125, 'grad_norm': 14.043143272399902, 'learning_rate': 0.00013636363636363637, 'epoch': 0.24}
+{'loss': 2.2961, 'grad_norm': 1.2564014196395874, 'learning_rate': 0.00018181818181818183, 'epoch': 0.32}
+{'loss': 2.4941, 'grad_norm': 1.8171210289001465, 'learning_rate': 0.00019855595667870037, 'epoch': 0.4}
+{'loss': 2.1996, 'grad_norm': 5.971194744110107, 'learning_rate': 0.00019614921780986764, 'epoch': 0.48}
+{'loss': 2.3479, 'grad_norm': 4.757968425750732, 'learning_rate': 0.0001937424789410349, 'epoch': 0.56}
+{'loss': 2.1177, 'grad_norm': 1.3702294826507568, 'learning_rate': 0.0001913357400722022, 'epoch': 0.64}
+{'loss': 2.1255, 'grad_norm': 1.142467737197876, 'learning_rate': 0.00018892900120336944, 'epoch': 0.72}
+{'loss': 2.1246, 'grad_norm': 2.3103139400482178, 'learning_rate': 0.00018652226233453672, 'epoch': 0.8}
+{'loss': 2.304, 'grad_norm': 3.9035792350769043, 'learning_rate': 0.00018411552346570396, 'epoch': 0.88}
+{'loss': 1.9638, 'grad_norm': 2.8263649940490723, 'learning_rate': 0.00018170878459687124, 'epoch': 0.96}
+  [KL] First-epoch done at step 125: KL mean=0.0150 std=0.0151 → early-stop threshold = 0.0301
+  [KL] Early stop at step 126: rolling mean (last 20) = 0.0376 > threshold 0.0301.
+{'train_runtime': 73.1035, 'train_samples_per_second': 47.877, 'train_steps_per_second': 11.969, 'train_loss': 2.2363405978585793, 'epoch': 1.02}
+  [grad_cb] 20Minuten: flushed 6 entries  (6 total steps, every 20)  R:×32  W×32
+  [KL] Phase 2 complete: steps=127  mean_kl=0.0153  tail_kl=0.0376  stop_step=126  threshold=0.0301
+  [KL] Save-time KL_final on val (<=50 batches) = 0.0571  (diagnostic only — no blending)
+  [fisher] 20Minuten: F(R)=2.049e-05  F(W)=0.000e+00  F(b)=0.000e+00
+  [memory] Task '20Minuten' → G3 [OVERWRITE — KL-restrained trained W stored as new group state]  groupwise_ivs=32 (T1+T2+T3_f)  t3l_taskwise_ivs=0 (T3_l)  kl_final=0.0571  (now 3 tasks in G3: ['Py150', 'ScienceQA', '20Minuten'])
+Directory '/projects/bfwa/mhossen1/CRAFT-CL/explore/Beta_dose_response/outputs/CRAFT_CL_betadose_0p05_llama32_1b_15task_2026-08-20_03-26-10/ckpt_07.20Minuten.20260820041926991369' already exists.
+  Checkpoint saved → /projects/bfwa/mhossen1/CRAFT-CL/explore/Beta_dose_response/outputs/CRAFT_CL_betadose_0p05_llama32_1b_15task_2026-08-20_03-26-10/ckpt_07.20Minuten.20260820041926991369
+
+  Backward evaluation after 20Minuten:
+  Task               Score    Forgetting
+  ---------------  -------  ------------
+  [gpu_mem] before backward-eval: 3.32 GiB allocated
+  [build_reft] R restored on 32 layers.
+  C-STANCE score: 0.4500
+  C-STANCE          0.4500       +0.0000
+  [build_reft] R restored on 32 layers.
+  FOMC score: 0.4800
+  FOMC              0.4800       +0.1100
+  [build_reft] R restored on 32 layers.
+  MeetingBank ROUGE-L: 0.1537
+  MeetingBank       0.1537       +0.0000
+  [build_reft] R restored on 32 layers.
+  Py150 score: 0.3175
+  Py150             0.3175       +0.1105
+  [build_reft] R restored on 32 layers.
+  ScienceQA score: 0.5600
+  ScienceQA         0.5600       +0.0500
+  [build_reft] R restored on 32 layers.
+  NumGLUE-cm score: 0.1220
+  NumGLUE-cm        0.1220       +0.1707
+  [build_reft] R restored on 32 layers.
+  NumGLUE-ds score: 0.3600
+  NumGLUE-ds        0.3600       +0.0000
+  [build_reft] R restored on 32 layers.
+  20Minuten ROUGE-L (SARI fallback): 0.1504
+  20Minuten         0.1504    (just trained)
+  [gpu_mem] after backward-eval:  3.32 GiB allocated
+
+  Mean forgetting: +0.0630
+
+========================================================================
+  CL step 9/15:  dbpedia  [epochs=5  pos=f15+l15]  (ref=cls)
+========================================================================
+
+loading data for dataset:  /projects/bfwa/mhossen1/CRAFT-CL/dataset/TRACE_Benchmark/LLM-CL-Benchmark_500/dbpedia/train.json
+  Training samples: 500
+  [label-check] task=dbpedia  non-masked=2/215 (0.93%)  first 20 label-ids=[41409, 128009]
+loading data for dataset:  /projects/bfwa/mhossen1/CRAFT-CL/dataset/TRACE_Benchmark/LLM-CL-Benchmark_500/dbpedia/eval.json
+  Eval set built: n=100
+
+  [kl_routing] Task 'dbpedia' against 4 existing group(s)  (warmup_steps=100  probe_size=16  threshold=0.7000  top_k=64  T=2.00  normalize=ratio  min_dkg=0.0100)
+  [task_probe] Built probe from current task (16 examples) — no past-task data.
+  [build_reft] R restored on 32 layers.
+  [kl_routing] Running warmup (100 steps) on 'dbpedia' ...
+{'loss': 3.064, 'grad_norm': 12.075672149658203, 'learning_rate': 0.00015000000000000001, 'epoch': 0.2}
+{'loss': 1.1561, 'grad_norm': 18.297531127929688, 'learning_rate': 0.0001, 'epoch': 0.4}
+{'loss': 0.6786, 'grad_norm': 32.7288818359375, 'learning_rate': 5e-05, 'epoch': 0.6}
+{'loss': 0.683, 'grad_norm': 33.42844772338867, 'learning_rate': 0.0, 'epoch': 0.8}
+{'train_runtime': 26.096, 'train_samples_per_second': 15.328, 'train_steps_per_second': 3.832, 'train_loss': 1.3954300117492675, 'epoch': 0.8}
+  [kl_routing] G0 (n=1, tasks=['C-STANCE']) — forward + KL ...
+  [build_reft] R restored on 32 layers.
+  [kl_routing] G0  D_KG=0.1801
+  [kl_routing] G1 (n=3, tasks=['FOMC', 'NumGLUE-cm', 'NumGLUE-ds']) — forward + KL ...
+  [build_reft] R restored on 32 layers.
+  [kl_routing] G1  D_KG=0.1543
+  [kl_routing] G2 (n=1, tasks=['MeetingBank']) — forward + KL ...
+  [build_reft] R restored on 32 layers.
+  [kl_routing] G2  D_KG=0.3475
+  [kl_routing] G3 (n=3, tasks=['Py150', 'ScienceQA', '20Minuten']) — forward + KL ...
+  [build_reft] R restored on 32 layers.
+  [kl_routing] G3  D_KG=0.3177
+  [kl_routing] G0  distance(ratio)=0.5183  (D_KG=0.1801  D_KG_max=0.3475)
+  [kl_routing] G1  distance(ratio)=0.4440  (D_KG=0.1543  D_KG_max=0.3475)
+  [kl_routing] G2  distance(ratio)=1.0000  (D_KG=0.3475  D_KG_max=0.3475)
+  [kl_routing] G3  distance(ratio)=0.9141  (D_KG=0.3177  D_KG_max=0.3475)
+  [kl_routing] closest=G1  distance=0.4440  threshold=0.7000  → JOIN G1
+
+  [Phase 1 complete] kl_routing for 'dbpedia':
+    n_existing_groups=4  mode=raw  router=kl_routing  aggregate=?  normalize=?  threshold=0.700
+     gid n_tk     t1_f    t1_l    t2_f    t2_l      raw    norm   tasks
+    -------------------------------------------------------------------
+    G0      1      nan     nan     nan     nan    0.518   0.518   C-STANCE
+    G1      3      nan     nan     nan     nan    0.444   0.444   FOMC,NumGLUE-cm,NumGLUE-ds
+    G2      1      nan     nan     nan     nan    1.000   1.000   MeetingBank
+    G3      3      nan     nan     nan     nan    0.914   0.914   Py150,ScienceQA,20Minuten
+    closest=G1  iv_match: agg=0/0
+    → decision: join_G1  (assigned_gid=G1)
+
+  [Phase 2] Full training ...
+  [build_reft] R restored on 32 layers.
+  Warm-starting from group G1.
+trainable intervention params: 1,048,832 || trainable model params: 0
+model params: 1,235,814,400 || trainable%: 0.08486970211708166
+  [StratOptim]
+    T1_groupwise        lr=2.00e-04  params=327,760
+    T2_groupwise        lr=2.00e-04  params=327,760
+    T3f_groupwise       lr=2.00e-04  params=196,656
+    T3l_taskwise        lr=2.00e-04  params=196,656
+  [build_reft] R restored on 32 layers.
+  [KL] Building KL-Razor controller (anchor=G1, 32 groupwise iv-keys, mode=output, β=0.050, normalized, evict).
+{'loss': 2.3555, 'grad_norm': 152.31787109375, 'learning_rate': 6.25e-05, 'epoch': 0.08}
+{'loss': 2.0572, 'grad_norm': 42.874183654785156, 'learning_rate': 0.000125, 'epoch': 0.16}
+{'loss': 1.0278, 'grad_norm': 12.660630226135254, 'learning_rate': 0.0001875, 'epoch': 0.24}
+{'loss': 0.8656, 'grad_norm': 15.31298542022705, 'learning_rate': 0.0001973018549747049, 'epoch': 0.32}
+{'loss': 0.8238, 'grad_norm': 13.987081527709961, 'learning_rate': 0.000193929173693086, 'epoch': 0.4}
+{'loss': 0.6628, 'grad_norm': 11.855684280395508, 'learning_rate': 0.00019055649241146713, 'epoch': 0.48}
+{'loss': 0.5136, 'grad_norm': 17.655467987060547, 'learning_rate': 0.00018718381112984824, 'epoch': 0.56}
+{'loss': 0.5383, 'grad_norm': 12.194198608398438, 'learning_rate': 0.00018381112984822934, 'epoch': 0.64}
+{'loss': 0.485, 'grad_norm': 9.546379089355469, 'learning_rate': 0.00018043844856661047, 'epoch': 0.72}
+{'loss': 0.3295, 'grad_norm': 9.484541893005371, 'learning_rate': 0.00017706576728499158, 'epoch': 0.8}
+{'loss': 0.2536, 'grad_norm': 12.815682411193848, 'learning_rate': 0.00017369308600337268, 'epoch': 0.88}
+{'loss': 0.3402, 'grad_norm': 13.426878929138184, 'learning_rate': 0.00017032040472175381, 'epoch': 0.96}
+  [KL] First-epoch done at step 125: KL mean=0.0431 std=0.0543 → early-stop threshold = 0.0974
+{'loss': 0.5409, 'grad_norm': 12.476055145263672, 'learning_rate': 0.00016694772344013492, 'epoch': 1.04}
+{'loss': 0.3485, 'grad_norm': 5.417784690856934, 'learning_rate': 0.00016357504215851602, 'epoch': 1.12}
+{'loss': 0.3193, 'grad_norm': 1.4056237936019897, 'learning_rate': 0.00016020236087689715, 'epoch': 1.2}
+{'loss': 0.2075, 'grad_norm': 10.098966598510742, 'learning_rate': 0.00015682967959527826, 'epoch': 1.28}
+{'loss': 0.3795, 'grad_norm': 9.334939002990723, 'learning_rate': 0.00015345699831365936, 'epoch': 1.36}
+{'loss': 0.2305, 'grad_norm': 5.970004558563232, 'learning_rate': 0.0001500843170320405, 'epoch': 1.44}
+{'loss': 0.177, 'grad_norm': 6.31508731842041, 'learning_rate': 0.0001467116357504216, 'epoch': 1.52}
+{'loss': 0.3023, 'grad_norm': 12.229765892028809, 'learning_rate': 0.0001433389544688027, 'epoch': 1.6}
+{'loss': 0.2809, 'grad_norm': 0.746798574924469, 'learning_rate': 0.00013996627318718383, 'epoch': 1.68}
+{'loss': 0.4071, 'grad_norm': 2.6504504680633545, 'learning_rate': 0.00013659359190556494, 'epoch': 1.76}
+{'loss': 0.2741, 'grad_norm': 3.9776642322540283, 'learning_rate': 0.00013322091062394604, 'epoch': 1.84}
+{'loss': 0.1496, 'grad_norm': 18.415821075439453, 'learning_rate': 0.00012984822934232717, 'epoch': 1.92}
+{'loss': 0.3245, 'grad_norm': 10.370185852050781, 'learning_rate': 0.00012647554806070828, 'epoch': 2.0}
+{'loss': 0.109, 'grad_norm': 1.2700071334838867, 'learning_rate': 0.00012310286677908938, 'epoch': 2.08}
+{'loss': 0.1027, 'grad_norm': 3.515795946121216, 'learning_rate': 0.0001197301854974705, 'epoch': 2.16}
+{'loss': 0.2243, 'grad_norm': 1.2504844665527344, 'learning_rate': 0.0001163575042158516, 'epoch': 2.24}
+{'loss': 0.424, 'grad_norm': 1.1200697422027588, 'learning_rate': 0.00011298482293423271, 'epoch': 2.32}
+{'loss': 0.1098, 'grad_norm': 1.1786308288574219, 'learning_rate': 0.00010961214165261384, 'epoch': 2.4}
+{'loss': 0.4647, 'grad_norm': 7.460529327392578, 'learning_rate': 0.00010623946037099494, 'epoch': 2.48}
+{'loss': 0.0908, 'grad_norm': 8.056396484375, 'learning_rate': 0.00010286677908937605, 'epoch': 2.56}
+{'loss': 0.5068, 'grad_norm': 81.03297424316406, 'learning_rate': 9.949409780775717e-05, 'epoch': 2.64}
+{'loss': 0.1403, 'grad_norm': 2.357539653778076, 'learning_rate': 9.612141652613828e-05, 'epoch': 2.72}
+{'loss': 0.1332, 'grad_norm': 9.77637004852295, 'learning_rate': 9.27487352445194e-05, 'epoch': 2.8}
+{'loss': 0.1211, 'grad_norm': 7.693459510803223, 'learning_rate': 8.93760539629005e-05, 'epoch': 2.88}
+{'loss': 0.0727, 'grad_norm': 1.0052411556243896, 'learning_rate': 8.600337268128162e-05, 'epoch': 2.96}
+{'loss': 0.129, 'grad_norm': 2.626784324645996, 'learning_rate': 8.263069139966274e-05, 'epoch': 3.04}
+{'loss': 0.5213, 'grad_norm': 0.8603383898735046, 'learning_rate': 7.925801011804385e-05, 'epoch': 3.12}
+{'loss': 0.2246, 'grad_norm': 0.990707278251648, 'learning_rate': 7.588532883642496e-05, 'epoch': 3.2}
+{'loss': 0.1131, 'grad_norm': 2.6663551330566406, 'learning_rate': 7.251264755480608e-05, 'epoch': 3.28}
+{'loss': 0.2388, 'grad_norm': 16.55882453918457, 'learning_rate': 6.913996627318719e-05, 'epoch': 3.36}
+{'loss': 0.1221, 'grad_norm': 1.2156929969787598, 'learning_rate': 6.57672849915683e-05, 'epoch': 3.44}
+{'loss': 0.141, 'grad_norm': 1.0279709100723267, 'learning_rate': 6.239460370994942e-05, 'epoch': 3.52}
+{'loss': 0.3035, 'grad_norm': 5.3676629066467285, 'learning_rate': 5.9021922428330526e-05, 'epoch': 3.6}
+{'loss': 0.0622, 'grad_norm': 5.3427958488464355, 'learning_rate': 5.564924114671164e-05, 'epoch': 3.68}
+{'loss': 0.056, 'grad_norm': 4.576439380645752, 'learning_rate': 5.2276559865092755e-05, 'epoch': 3.76}
+{'loss': 0.1264, 'grad_norm': 0.3795512616634369, 'learning_rate': 4.8903878583473866e-05, 'epoch': 3.84}
+{'loss': 0.0799, 'grad_norm': 1.379888892173767, 'learning_rate': 4.553119730185498e-05, 'epoch': 3.92}
+{'loss': 0.1792, 'grad_norm': 1.8307092189788818, 'learning_rate': 4.215851602023609e-05, 'epoch': 4.0}
+{'loss': 0.1816, 'grad_norm': 5.638442039489746, 'learning_rate': 3.8785834738617206e-05, 'epoch': 4.08}
+{'loss': 0.1224, 'grad_norm': 12.763436317443848, 'learning_rate': 3.541315345699832e-05, 'epoch': 4.16}
+{'loss': 0.086, 'grad_norm': 1.015411376953125, 'learning_rate': 3.204047217537943e-05, 'epoch': 4.24}
+{'loss': 0.0731, 'grad_norm': 0.9580946564674377, 'learning_rate': 2.8667790893760543e-05, 'epoch': 4.32}
+{'loss': 0.137, 'grad_norm': 1.206849217414856, 'learning_rate': 2.5295109612141654e-05, 'epoch': 4.4}
+{'loss': 0.2123, 'grad_norm': 3.1151387691497803, 'learning_rate': 2.1922428330522768e-05, 'epoch': 4.48}
+{'loss': 0.076, 'grad_norm': 6.6156511306762695, 'learning_rate': 1.854974704890388e-05, 'epoch': 4.56}
+{'loss': 0.1244, 'grad_norm': 1.4359164237976074, 'learning_rate': 1.5177065767284992e-05, 'epoch': 4.64}
+{'loss': 0.1424, 'grad_norm': 0.3998875916004181, 'learning_rate': 1.1804384485666105e-05, 'epoch': 4.72}
+{'loss': 0.0678, 'grad_norm': 0.35745009779930115, 'learning_rate': 8.431703204047219e-06, 'epoch': 4.8}
+{'loss': 0.1282, 'grad_norm': 9.804998397827148, 'learning_rate': 5.059021922428331e-06, 'epoch': 4.88}
+{'loss': 0.124, 'grad_norm': 5.576361656188965, 'learning_rate': 1.6863406408094434e-06, 'epoch': 4.96}
+{'train_runtime': 212.4335, 'train_samples_per_second': 11.768, 'train_steps_per_second': 2.942, 'train_loss': 0.3330608613014221, 'epoch': 5.0}
+  [grad_cb] dbpedia: flushed 31 entries  (31 total steps, every 20)  R:×32  W×32
+  [KL] Phase 2 complete: steps=625  mean_kl=0.0357  tail_kl=0.0144  stop_step=None  threshold=0.0974
+  [KL] Save-time KL_final on val (<=50 batches) = 0.6002  (diagnostic only — no blending)
+  [fisher] dbpedia: F(R)=7.845e-03  F(W)=0.000e+00  F(b)=0.000e+00
+  [memory] Task 'dbpedia' → G1 [OVERWRITE — KL-restrained trained W stored as new group state]  groupwise_ivs=32 (T1+T2+T3_f)  t3l_taskwise_ivs=0 (T3_l)  kl_final=0.6002  (now 4 tasks in G1: ['FOMC', 'NumGLUE-cm', 'NumGLUE-ds', 'dbpedia'])
+Directory '/projects/bfwa/mhossen1/CRAFT-CL/explore/Beta_dose_response/outputs/CRAFT_CL_betadose_0p05_llama32_1b_15task_2026-08-20_03-26-10/ckpt_08.dbpedia.20260820043040755376' already exists.
+  Checkpoint saved → /projects/bfwa/mhossen1/CRAFT-CL/explore/Beta_dose_response/outputs/CRAFT_CL_betadose_0p05_llama32_1b_15task_2026-08-20_03-26-10/ckpt_08.dbpedia.20260820043040755376
+
+  Backward evaluation after dbpedia:
+  Task               Score    Forgetting
+  ---------------  -------  ------------
+  [gpu_mem] before backward-eval: 3.32 GiB allocated
+  [build_reft] R restored on 32 layers.
+  C-STANCE score: 0.4500
+  C-STANCE          0.4500       +0.0000
+  [build_reft] R restored on 32 layers.
+  FOMC score: 0.2800
+  FOMC              0.2800       +0.3100
+  [build_reft] R restored on 32 layers.
+  MeetingBank ROUGE-L: 0.1537
+  MeetingBank       0.1537       +0.0000
+  [build_reft] R restored on 32 layers.
+  Py150 score: 0.3175
+  Py150             0.3175       +0.1105
+  [build_reft] R restored on 32 layers.
+  ScienceQA score: 0.5600
+  ScienceQA         0.5600       +0.0500
+  [build_reft] R restored on 32 layers.
+  NumGLUE-cm score: 0.1463
+  NumGLUE-cm        0.1463       +0.1464
+  [build_reft] R restored on 32 layers.
+  NumGLUE-ds score: 0.3100
+  NumGLUE-ds        0.3100       +0.0500
+  [build_reft] R restored on 32 layers.
+  20Minuten ROUGE-L (SARI fallback): 0.1504
+  20Minuten         0.1504       +0.0000
+  [build_reft] R restored on 32 layers.
+  dbpedia accuracy: 0.9700
+  dbpedia           0.9700    (just trained)
+  [gpu_mem] after backward-eval:  3.32 GiB allocated
+
+  Mean forgetting: +0.0834
+
+========================================================================
+  CL step 10/15:  amazon  [epochs=5  pos=f15+l15]  (ref=cls)
+========================================================================
+
+loading data for dataset:  /projects/bfwa/mhossen1/CRAFT-CL/dataset/TRACE_Benchmark/LLM-CL-Benchmark_500/amazon/train.json
+  Training samples: 500
+  [label-check] task=amazon  non-masked=2/297 (0.67%)  first 20 label-ids=[60668, 128009]
+loading data for dataset:  /projects/bfwa/mhossen1/CRAFT-CL/dataset/TRACE_Benchmark/LLM-CL-Benchmark_500/amazon/eval.json
+  Eval set built: n=100
+
+  [kl_routing] Task 'amazon' against 4 existing group(s)  (warmup_steps=100  probe_size=16  threshold=0.7000  top_k=64  T=2.00  normalize=ratio  min_dkg=0.0100)
+  [task_probe] Built probe from current task (16 examples) — no past-task data.
+  [build_reft] R restored on 32 layers.
+  [kl_routing] Running warmup (100 steps) on 'amazon' ...
+{'loss': 4.5481, 'grad_norm': 11.263535499572754, 'learning_rate': 0.00015000000000000001, 'epoch': 0.2}
+{'loss': 4.0559, 'grad_norm': 12.72274398803711, 'learning_rate': 0.0001, 'epoch': 0.4}
+{'loss': 3.6002, 'grad_norm': 11.095165252685547, 'learning_rate': 5e-05, 'epoch': 0.6}
+{'loss': 2.9174, 'grad_norm': 15.376460075378418, 'learning_rate': 0.0, 'epoch': 0.8}
+{'train_runtime': 26.435, 'train_samples_per_second': 15.131, 'train_steps_per_second': 3.783, 'train_loss': 3.7804046630859376, 'epoch': 0.8}
+  [kl_routing] G0 (n=1, tasks=['C-STANCE']) — forward + KL ...
+  [build_reft] R restored on 32 layers.
+  [kl_routing] G0  D_KG=0.1193
+  [kl_routing] G1 (n=4, tasks=['FOMC', 'NumGLUE-cm', 'NumGLUE-ds', 'dbpedia']) — forward + KL ...
+  [build_reft] R restored on 32 layers.
+  [kl_routing] G1  D_KG=0.0977
+  [kl_routing] G2 (n=1, tasks=['MeetingBank']) — forward + KL ...
+  [build_reft] R restored on 32 layers.
+  [kl_routing] G2  D_KG=0.4226
+  [kl_routing] G3 (n=3, tasks=['Py150', 'ScienceQA', '20Minuten']) — forward + KL ...
+  [build_reft] R restored on 32 layers.
+  [kl_routing] G3  D_KG=0.1556
+  [kl_routing] G0  distance(ratio)=0.2824  (D_KG=0.1193  D_KG_max=0.4226)
+  [kl_routing] G1  distance(ratio)=0.2312  (D_KG=0.0977  D_KG_max=0.4226)
+  [kl_routing] G2  distance(ratio)=1.0000  (D_KG=0.4226  D_KG_max=0.4226)
+  [kl_routing] G3  distance(ratio)=0.3683  (D_KG=0.1556  D_KG_max=0.4226)
+  [kl_routing] closest=G1  distance=0.2312  threshold=0.7000  → JOIN G1
+
+  [Phase 1 complete] kl_routing for 'amazon':
+    n_existing_groups=4  mode=raw  router=kl_routing  aggregate=?  normalize=?  threshold=0.700
+     gid n_tk     t1_f    t1_l    t2_f    t2_l      raw    norm   tasks
+    -------------------------------------------------------------------
+    G0      1      nan     nan     nan     nan    0.282   0.282   C-STANCE
+    G1      4      nan     nan     nan     nan    0.231   0.231   FOMC,NumGLUE-cm,NumGLUE-ds,d
+    G2      1      nan     nan     nan     nan    1.000   1.000   MeetingBank
+    G3      3      nan     nan     nan     nan    0.368   0.368   Py150,ScienceQA,20Minuten
+    closest=G1  iv_match: agg=0/0
+    → decision: join_G1  (assigned_gid=G1)
+
+  [Phase 2] Full training ...
+  [build_reft] R restored on 32 layers.
+  Warm-starting from group G1.
+trainable intervention params: 1,048,832 || trainable model params: 0
+model params: 1,235,814,400 || trainable%: 0.08486970211708166
+  [StratOptim]
+    T1_groupwise        lr=2.00e-04  params=327,760
+    T2_groupwise        lr=2.00e-04  params=327,760
+    T3f_groupwise       lr=2.00e-04  params=196,656
+    T3l_taskwise        lr=2.00e-04  params=196,656
+  [build_reft] R restored on 32 layers.
+  [KL] Building KL-Razor controller (anchor=G1, 32 groupwise iv-keys, mode=output, β=0.050, normalized, evict).
+{'loss': 2.9837, 'grad_norm': 422.92755126953125, 'learning_rate': 6.25e-05, 'epoch': 0.08}
+{'loss': 3.7279, 'grad_norm': 125.79878997802734, 'learning_rate': 0.000125, 'epoch': 0.16}
+{'loss': 1.7246, 'grad_norm': 14.824151992797852, 'learning_rate': 0.0001875, 'epoch': 0.24}
+{'loss': 1.6055, 'grad_norm': 5.545504570007324, 'learning_rate': 0.0001973018549747049, 'epoch': 0.32}
+{'loss': 1.5315, 'grad_norm': 6.656561374664307, 'learning_rate': 0.000193929173693086, 'epoch': 0.4}
+{'loss': 1.9574, 'grad_norm': 11.274581909179688, 'learning_rate': 0.00019055649241146713, 'epoch': 0.48}
+{'loss': 1.6545, 'grad_norm': 9.053947448730469, 'learning_rate': 0.00018718381112984824, 'epoch': 0.56}
+{'loss': 1.7644, 'grad_norm': 7.303971290588379, 'learning_rate': 0.00018381112984822934, 'epoch': 0.64}
+{'loss': 2.3156, 'grad_norm': 3.322066068649292, 'learning_rate': 0.00018043844856661047, 'epoch': 0.72}
+{'loss': 1.7035, 'grad_norm': 3.8481733798980713, 'learning_rate': 0.00017706576728499158, 'epoch': 0.8}
+{'loss': 1.3822, 'grad_norm': 8.813578605651855, 'learning_rate': 0.00017369308600337268, 'epoch': 0.88}
+{'loss': 1.3404, 'grad_norm': 17.260982513427734, 'learning_rate': 0.00017032040472175381, 'epoch': 0.96}
+  [KL] First-epoch done at step 125: KL mean=0.0265 std=0.0463 → early-stop threshold = 0.0728
+{'loss': 1.9961, 'grad_norm': 4.509418964385986, 'learning_rate': 0.00016694772344013492, 'epoch': 1.04}
+{'loss': 0.8294, 'grad_norm': 17.75297737121582, 'learning_rate': 0.00016357504215851602, 'epoch': 1.12}
+{'loss': 1.4339, 'grad_norm': 8.638416290283203, 'learning_rate': 0.00016020236087689715, 'epoch': 1.2}
+{'loss': 1.9157, 'grad_norm': 8.688610076904297, 'learning_rate': 0.00015682967959527826, 'epoch': 1.28}
+{'loss': 1.4051, 'grad_norm': 3.280898332595825, 'learning_rate': 0.00015345699831365936, 'epoch': 1.36}
+{'loss': 1.9676, 'grad_norm': 10.976611137390137, 'learning_rate': 0.0001500843170320405, 'epoch': 1.44}
+{'loss': 1.385, 'grad_norm': 6.070717811584473, 'learning_rate': 0.0001467116357504216, 'epoch': 1.52}
+{'loss': 1.4307, 'grad_norm': 5.1703081130981445, 'learning_rate': 0.0001433389544688027, 'epoch': 1.6}
+{'loss': 1.3794, 'grad_norm': 6.129345893859863, 'learning_rate': 0.00013996627318718383, 'epoch': 1.68}
+{'loss': 2.057, 'grad_norm': 5.732323169708252, 'learning_rate': 0.00013659359190556494, 'epoch': 1.76}
+{'loss': 2.1758, 'grad_norm': 11.436432838439941, 'learning_rate': 0.00013322091062394604, 'epoch': 1.84}
+{'loss': 1.335, 'grad_norm': 12.343908309936523, 'learning_rate': 0.00012984822934232717, 'epoch': 1.92}
+{'loss': 1.5622, 'grad_norm': 7.090063571929932, 'learning_rate': 0.00012647554806070828, 'epoch': 2.0}
+{'loss': 1.3319, 'grad_norm': 3.9188528060913086, 'learning_rate': 0.00012310286677908938, 'epoch': 2.08}
+{'loss': 1.2858, 'grad_norm': 5.870482444763184, 'learning_rate': 0.0001197301854974705, 'epoch': 2.16}
+{'loss': 1.5684, 'grad_norm': 6.626101016998291, 'learning_rate': 0.0001163575042158516, 'epoch': 2.24}
+{'loss': 1.5544, 'grad_norm': 4.662355899810791, 'learning_rate': 0.00011298482293423271, 'epoch': 2.32}
+{'loss': 1.4648, 'grad_norm': 10.832253456115723, 'learning_rate': 0.00010961214165261384, 'epoch': 2.4}
+{'loss': 1.6554, 'grad_norm': 7.018687725067139, 'learning_rate': 0.00010623946037099494, 'epoch': 2.48}
+{'loss': 1.3824, 'grad_norm': 8.390732765197754, 'learning_rate': 0.00010286677908937605, 'epoch': 2.56}
+{'loss': 1.1211, 'grad_norm': 10.808696746826172, 'learning_rate': 9.949409780775717e-05, 'epoch': 2.64}
+{'loss': 1.2225, 'grad_norm': 8.585183143615723, 'learning_rate': 9.612141652613828e-05, 'epoch': 2.72}
+{'loss': 1.048, 'grad_norm': 5.036116123199463, 'learning_rate': 9.27487352445194e-05, 'epoch': 2.8}
+{'loss': 1.9121, 'grad_norm': 8.841292381286621, 'learning_rate': 8.93760539629005e-05, 'epoch': 2.88}
+{'loss': 1.694, 'grad_norm': 4.288766860961914, 'learning_rate': 8.600337268128162e-05, 'epoch': 2.96}
+{'loss': 1.1604, 'grad_norm': 10.478297233581543, 'learning_rate': 8.263069139966274e-05, 'epoch': 3.04}
+{'loss': 1.6683, 'grad_norm': 9.790027618408203, 'learning_rate': 7.925801011804385e-05, 'epoch': 3.12}
+{'loss': 1.7946, 'grad_norm': 2.189467430114746, 'learning_rate': 7.588532883642496e-05, 'epoch': 3.2}
+{'loss': 1.2882, 'grad_norm': 12.245174407958984, 'learning_rate': 7.251264755480608e-05, 'epoch': 3.28}
+{'loss': 1.7061, 'grad_norm': 9.788724899291992, 'learning_rate': 6.913996627318719e-05, 'epoch': 3.36}
+{'loss': 2.1053, 'grad_norm': 2.405294179916382, 'learning_rate': 6.57672849915683e-05, 'epoch': 3.44}
+{'loss': 0.6839, 'grad_norm': 5.721729755401611, 'learning_rate': 6.239460370994942e-05, 'epoch': 3.52}
+{'loss': 1.4274, 'grad_norm': 7.607425689697266, 'learning_rate': 5.9021922428330526e-05, 'epoch': 3.6}
+{'loss': 2.584, 'grad_norm': 9.08541488647461, 'learning_rate': 5.564924114671164e-05, 'epoch': 3.68}
+{'loss': 0.7592, 'grad_norm': 7.024233818054199, 'learning_rate': 5.2276559865092755e-05, 'epoch': 3.76}
+{'loss': 1.5092, 'grad_norm': 3.9196183681488037, 'learning_rate': 4.8903878583473866e-05, 'epoch': 3.84}
+{'loss': 1.2132, 'grad_norm': 9.927021980285645, 'learning_rate': 4.553119730185498e-05, 'epoch': 3.92}
+{'loss': 1.403, 'grad_norm': 4.192745685577393, 'learning_rate': 4.215851602023609e-05, 'epoch': 4.0}
+{'loss': 1.278, 'grad_norm': 10.219938278198242, 'learning_rate': 3.8785834738617206e-05, 'epoch': 4.08}
+{'loss': 1.8598, 'grad_norm': 11.814433097839355, 'learning_rate': 3.541315345699832e-05, 'epoch': 4.16}
+{'loss': 1.4552, 'grad_norm': 3.769810438156128, 'learning_rate': 3.204047217537943e-05, 'epoch': 4.24}
+{'loss': 1.1613, 'grad_norm': 3.2708120346069336, 'learning_rate': 2.8667790893760543e-05, 'epoch': 4.32}
+{'loss': 2.4397, 'grad_norm': 9.748881340026855, 'learning_rate': 2.5295109612141654e-05, 'epoch': 4.4}
+{'loss': 1.8212, 'grad_norm': 11.202646255493164, 'learning_rate': 2.1922428330522768e-05, 'epoch': 4.48}
+{'loss': 1.2672, 'grad_norm': 8.418139457702637, 'learning_rate': 1.854974704890388e-05, 'epoch': 4.56}
+{'loss': 1.5526, 'grad_norm': 9.310141563415527, 'learning_rate': 1.5177065767284992e-05, 'epoch': 4.64}
+{'loss': 2.3715, 'grad_norm': 3.4522531032562256, 'learning_rate': 1.1804384485666105e-05, 'epoch': 4.72}
+{'loss': 1.3954, 'grad_norm': 5.740633487701416, 'learning_rate': 8.431703204047219e-06, 'epoch': 4.8}
+{'loss': 1.8823, 'grad_norm': 6.097647666931152, 'learning_rate': 5.059021922428331e-06, 'epoch': 4.88}
+{'loss': 0.7858, 'grad_norm': 2.902623414993286, 'learning_rate': 1.6863406408094434e-06, 'epoch': 4.96}
+{'train_runtime': 216.9425, 'train_samples_per_second': 11.524, 'train_steps_per_second': 2.881, 'train_loss': 1.6211157127380371, 'epoch': 5.0}
+  [grad_cb] amazon: flushed 31 entries  (31 total steps, every 20)  R:×32  W×32
+  [KL] Phase 2 complete: steps=625  mean_kl=0.0162  tail_kl=0.0063  stop_step=None  threshold=0.0728
+  [KL] Save-time KL_final on val (<=50 batches) = 0.2858  (diagnostic only — no blending)
+  [fisher] amazon: F(R)=1.512e-02  F(W)=0.000e+00  F(b)=0.000e+00
+  [memory] Task 'amazon' → G1 [OVERWRITE — KL-restrained trained W stored as new group state]  groupwise_ivs=32 (T1+T2+T3_f)  t3l_taskwise_ivs=0 (T3_l)  kl_final=0.2858  (now 5 tasks in G1: ['FOMC', 'NumGLUE-cm', 'NumGLUE-ds', 'dbpedia', 'amazon'])
+Directory '/projects/bfwa/mhossen1/CRAFT-CL/explore/Beta_dose_response/outputs/CRAFT_CL_betadose_0p05_llama32_1b_15task_2026-08-20_03-26-10/ckpt_09.amazon.20260820044207507688' already exists.
+  Checkpoint saved → /projects/bfwa/mhossen1/CRAFT-CL/explore/Beta_dose_response/outputs/CRAFT_CL_betadose_0p05_llama32_1b_15task_2026-08-20_03-26-10/ckpt_09.amazon.20260820044207507688
+
+  Backward evaluation after amazon:
+  Task               Score    Forgetting
+  ---------------  -------  ------------
+  [gpu_mem] before backward-eval: 3.32 GiB allocated
+  [build_reft] R restored on 32 layers.
+  C-STANCE score: 0.4500
+  C-STANCE          0.4500       +0.0000
+  [build_reft] R restored on 32 layers.
+  FOMC score: 0.0000
+  FOMC              0.0000       +0.5900
+  [build_reft] R restored on 32 layers.
+  MeetingBank ROUGE-L: 0.1537
+  MeetingBank       0.1537       +0.0000
+  [build_reft] R restored on 32 layers.
+  Py150 score: 0.3175
+  Py150             0.3175       +0.1105
+  [build_reft] R restored on 32 layers.
+  ScienceQA score: 0.5600
+  ScienceQA         0.5600       +0.0500
+  [build_reft] R restored on 32 layers.
+  NumGLUE-cm score: 0.1463
+  NumGLUE-cm        0.1463       +0.1464
+  [build_reft] R restored on 32 layers.
+  NumGLUE-ds score: 0.3300
+  NumGLUE-ds        0.3300       +0.0300
+  [build_reft] R restored on 32 layers.
+  20Minuten ROUGE-L (SARI fallback): 0.1504
+  20Minuten         0.1504       +0.0000
+  [build_reft] R restored on 32 layers.
+  dbpedia accuracy: 0.9300
+  dbpedia           0.9300       +0.0400
+  [build_reft] R restored on 32 layers.
+  amazon accuracy: 0.5800
+  amazon            0.5800    (just trained)
+  [gpu_mem] after backward-eval:  3.32 GiB allocated
+
+  Mean forgetting: +0.1074
+
+========================================================================
+  CL step 11/15:  yahoo  [epochs=5  pos=f15+l15]  (ref=cls)
+========================================================================
+
+loading data for dataset:  /projects/bfwa/mhossen1/CRAFT-CL/dataset/TRACE_Benchmark/LLM-CL-Benchmark_500/yahoo/train.json
+  Training samples: 500
+  [label-check] task=yahoo  non-masked=4/235 (1.70%)  first 20 label-ids=[36500, 612, 50895, 128009]
+loading data for dataset:  /projects/bfwa/mhossen1/CRAFT-CL/dataset/TRACE_Benchmark/LLM-CL-Benchmark_500/yahoo/eval.json
+  Eval set built: n=100
+
+  [kl_routing] Task 'yahoo' against 4 existing group(s)  (warmup_steps=100  probe_size=16  threshold=0.7000  top_k=64  T=2.00  normalize=ratio  min_dkg=0.0100)
+  [task_probe] Built probe from current task (16 examples) — no past-task data.
+  [build_reft] R restored on 32 layers.
+  [kl_routing] Running warmup (100 steps) on 'yahoo' ...
+{'loss': 2.675, 'grad_norm': 11.43631362915039, 'learning_rate': 0.00015000000000000001, 'epoch': 0.2}
+{'loss': 2.2745, 'grad_norm': 3.969784736633301, 'learning_rate': 0.0001, 'epoch': 0.4}
+{'loss': 1.9861, 'grad_norm': 9.545748710632324, 'learning_rate': 5e-05, 'epoch': 0.6}
+{'loss': 1.9421, 'grad_norm': 8.063405990600586, 'learning_rate': 0.0, 'epoch': 0.8}
+{'train_runtime': 28.5333, 'train_samples_per_second': 14.019, 'train_steps_per_second': 3.505, 'train_loss': 2.219436836242676, 'epoch': 0.8}
+  [kl_routing] G0 (n=1, tasks=['C-STANCE']) — forward + KL ...
+  [build_reft] R restored on 32 layers.
+  [kl_routing] G0  D_KG=0.0309
+  [kl_routing] G1 (n=5, tasks=['FOMC', 'NumGLUE-cm', 'NumGLUE-ds', 'dbpedia', 'amazon']) — forward + KL ...
+  [build_reft] R restored on 32 layers.
+  [kl_routing] G1  D_KG=0.0549
+  [kl_routing] G2 (n=1, tasks=['MeetingBank']) — forward + KL ...
+  [build_reft] R restored on 32 layers.
+  [kl_routing] G2  D_KG=0.0585
+  [kl_routing] G3 (n=3, tasks=['Py150', 'ScienceQA', '20Minuten']) — forward + KL ...
+  [build_reft] R restored on 32 layers.
+  [kl_routing] G3  D_KG=0.0600
+  [kl_routing] G0  distance(ratio)=0.5156  (D_KG=0.0309  D_KG_max=0.0600)
+  [kl_routing] G1  distance(ratio)=0.9144  (D_KG=0.0549  D_KG_max=0.0600)
+  [kl_routing] G2  distance(ratio)=0.9745  (D_KG=0.0585  D_KG_max=0.0600)
+  [kl_routing] G3  distance(ratio)=1.0000  (D_KG=0.0600  D_KG_max=0.0600)
+  [kl_routing] closest=G0  distance=0.5156  threshold=0.7000  → JOIN G0
+
+  [Phase 1 complete] kl_routing for 'yahoo':
+    n_existing_groups=4  mode=raw  router=kl_routing  aggregate=?  normalize=?  threshold=0.700
+     gid n_tk     t1_f    t1_l    t2_f    t2_l      raw    norm   tasks
+    -------------------------------------------------------------------
+    G0      1      nan     nan     nan     nan    0.516   0.516   C-STANCE
+    G1      5      nan     nan     nan     nan    0.914   0.914   FOMC,NumGLUE-cm,NumGLUE-ds,d
+    G2      1      nan     nan     nan     nan    0.975   0.975   MeetingBank
+    G3      3      nan     nan     nan     nan    1.000   1.000   Py150,ScienceQA,20Minuten
+    closest=G0  iv_match: agg=0/0
+    → decision: join_G0  (assigned_gid=G0)
+
+  [Phase 2] Full training ...
+  [build_reft] R restored on 32 layers.
+  Warm-starting from group G0.
+trainable intervention params: 1,048,832 || trainable model params: 0
+model params: 1,235,814,400 || trainable%: 0.08486970211708166
+  [StratOptim]
+    T1_groupwise        lr=2.00e-04  params=327,760
+    T2_groupwise        lr=2.00e-04  params=327,760
+    T3f_groupwise       lr=2.00e-04  params=196,656
+    T3l_taskwise        lr=2.00e-04  params=196,656
+  [build_reft] R restored on 32 layers.
+  [KL] Building KL-Razor controller (anchor=G0, 32 groupwise iv-keys, mode=output, β=0.050, normalized, evict).
+{'loss': 4.3181, 'grad_norm': 5.066596984863281, 'learning_rate': 6.25e-05, 'epoch': 0.08}
+{'loss': 3.5844, 'grad_norm': 62.14944076538086, 'learning_rate': 0.000125, 'epoch': 0.16}
+{'loss': 2.8727, 'grad_norm': 7.684494972229004, 'learning_rate': 0.0001875, 'epoch': 0.24}
+{'loss': 2.5847, 'grad_norm': 15.8611421585083, 'learning_rate': 0.0001973018549747049, 'epoch': 0.32}
+{'loss': 2.5206, 'grad_norm': 9.239165306091309, 'learning_rate': 0.000193929173693086, 'epoch': 0.4}
+{'loss': 3.0629, 'grad_norm': 6.64972448348999, 'learning_rate': 0.00019055649241146713, 'epoch': 0.48}
+{'loss': 1.62, 'grad_norm': 4.743185997009277, 'learning_rate': 0.00018718381112984824, 'epoch': 0.56}
+{'loss': 2.5886, 'grad_norm': 15.372499465942383, 'learning_rate': 0.00018381112984822934, 'epoch': 0.64}
+{'loss': 1.455, 'grad_norm': 7.975921154022217, 'learning_rate': 0.00018043844856661047, 'epoch': 0.72}
+{'loss': 1.5818, 'grad_norm': 9.314437866210938, 'learning_rate': 0.00017706576728499158, 'epoch': 0.8}
+{'loss': 1.7654, 'grad_norm': 6.04110860824585, 'learning_rate': 0.00017369308600337268, 'epoch': 0.88}
+{'loss': 1.5755, 'grad_norm': 4.051212310791016, 'learning_rate': 0.00017032040472175381, 'epoch': 0.96}
+  [KL] First-epoch done at step 125: KL mean=0.1074 std=0.1300 → early-stop threshold = 0.2374
+{'loss': 1.773, 'grad_norm': 8.65910816192627, 'learning_rate': 0.00016694772344013492, 'epoch': 1.04}
+{'loss': 1.7081, 'grad_norm': 5.780773162841797, 'learning_rate': 0.00016357504215851602, 'epoch': 1.12}
+{'loss': 1.0498, 'grad_norm': 6.801549434661865, 'learning_rate': 0.00016020236087689715, 'epoch': 1.2}
+{'loss': 0.9091, 'grad_norm': 3.364490509033203, 'learning_rate': 0.00015682967959527826, 'epoch': 1.28}
+{'loss': 2.0617, 'grad_norm': 11.224799156188965, 'learning_rate': 0.00015345699831365936, 'epoch': 1.36}
+{'loss': 1.21, 'grad_norm': 7.800451278686523, 'learning_rate': 0.0001500843170320405, 'epoch': 1.44}
+{'loss': 1.9042, 'grad_norm': 7.262272834777832, 'learning_rate': 0.0001467116357504216, 'epoch': 1.52}
+{'loss': 2.1479, 'grad_norm': 3.7102086544036865, 'learning_rate': 0.0001433389544688027, 'epoch': 1.6}
+{'loss': 1.7442, 'grad_norm': 8.74777889251709, 'learning_rate': 0.00013996627318718383, 'epoch': 1.68}
+{'loss': 1.6719, 'grad_norm': 5.139778137207031, 'learning_rate': 0.00013659359190556494, 'epoch': 1.76}
+{'loss': 1.479, 'grad_norm': 1.9171464443206787, 'learning_rate': 0.00013322091062394604, 'epoch': 1.84}
+{'loss': 1.1024, 'grad_norm': 2.3447301387786865, 'learning_rate': 0.00012984822934232717, 'epoch': 1.92}
+{'loss': 1.318, 'grad_norm': 7.903273582458496, 'learning_rate': 0.00012647554806070828, 'epoch': 2.0}
+{'loss': 1.3535, 'grad_norm': 5.707911968231201, 'learning_rate': 0.00012310286677908938, 'epoch': 2.08}
+{'loss': 1.6943, 'grad_norm': 8.380489349365234, 'learning_rate': 0.0001197301854974705, 'epoch': 2.16}
+{'loss': 1.9751, 'grad_norm': 0.8505606651306152, 'learning_rate': 0.0001163575042158516, 'epoch': 2.24}
+{'loss': 1.4335, 'grad_norm': 0.9517832398414612, 'learning_rate': 0.00011298482293423271, 'epoch': 2.32}
+{'loss': 1.7081, 'grad_norm': 7.5129570960998535, 'learning_rate': 0.00010961214165261384, 'epoch': 2.4}
+{'loss': 1.6278, 'grad_norm': 1.459829330444336, 'learning_rate': 0.00010623946037099494, 'epoch': 2.48}
+{'loss': 1.3983, 'grad_norm': 8.871078491210938, 'learning_rate': 0.00010286677908937605, 'epoch': 2.56}
+{'loss': 1.7863, 'grad_norm': 4.8024187088012695, 'learning_rate': 9.949409780775717e-05, 'epoch': 2.64}
+{'loss': 1.4098, 'grad_norm': 8.94650936126709, 'learning_rate': 9.612141652613828e-05, 'epoch': 2.72}
+{'loss': 1.3339, 'grad_norm': 5.150041103363037, 'learning_rate': 9.27487352445194e-05, 'epoch': 2.8}
+{'loss': 0.9215, 'grad_norm': 7.643884181976318, 'learning_rate': 8.93760539629005e-05, 'epoch': 2.88}
+{'loss': 1.5552, 'grad_norm': 5.143172264099121, 'learning_rate': 8.600337268128162e-05, 'epoch': 2.96}
+{'loss': 1.4553, 'grad_norm': 6.375439643859863, 'learning_rate': 8.263069139966274e-05, 'epoch': 3.04}
+{'loss': 1.6932, 'grad_norm': 4.381277561187744, 'learning_rate': 7.925801011804385e-05, 'epoch': 3.12}
+{'loss': 1.7102, 'grad_norm': 6.06760835647583, 'learning_rate': 7.588532883642496e-05, 'epoch': 3.2}
+{'loss': 0.6525, 'grad_norm': 1.9268429279327393, 'learning_rate': 7.251264755480608e-05, 'epoch': 3.28}
+{'loss': 1.5089, 'grad_norm': 7.253873825073242, 'learning_rate': 6.913996627318719e-05, 'epoch': 3.36}
+{'loss': 1.5142, 'grad_norm': 9.055299758911133, 'learning_rate': 6.57672849915683e-05, 'epoch': 3.44}
+{'loss': 1.2214, 'grad_norm': 1.6209553480148315, 'learning_rate': 6.239460370994942e-05, 'epoch': 3.52}
+{'loss': 0.7021, 'grad_norm': 3.32368803024292, 'learning_rate': 5.9021922428330526e-05, 'epoch': 3.6}
+{'loss': 1.3623, 'grad_norm': 4.123434066772461, 'learning_rate': 5.564924114671164e-05, 'epoch': 3.68}
+{'loss': 2.0424, 'grad_norm': 10.527538299560547, 'learning_rate': 5.2276559865092755e-05, 'epoch': 3.76}
+{'loss': 1.289, 'grad_norm': 7.44438362121582, 'learning_rate': 4.8903878583473866e-05, 'epoch': 3.84}
+{'loss': 1.4947, 'grad_norm': 1.180526614189148, 'learning_rate': 4.553119730185498e-05, 'epoch': 3.92}
+{'loss': 1.1786, 'grad_norm': 1.1622017621994019, 'learning_rate': 4.215851602023609e-05, 'epoch': 4.0}
+{'loss': 1.8362, 'grad_norm': 5.045025825500488, 'learning_rate': 3.8785834738617206e-05, 'epoch': 4.08}
+{'loss': 1.4122, 'grad_norm': 0.13738936185836792, 'learning_rate': 3.541315345699832e-05, 'epoch': 4.16}
+{'loss': 1.8879, 'grad_norm': 8.074700355529785, 'learning_rate': 3.204047217537943e-05, 'epoch': 4.24}
+{'loss': 1.0355, 'grad_norm': 5.791414260864258, 'learning_rate': 2.8667790893760543e-05, 'epoch': 4.32}
+{'loss': 1.306, 'grad_norm': 2.8789849281311035, 'learning_rate': 2.5295109612141654e-05, 'epoch': 4.4}
+{'loss': 1.7509, 'grad_norm': 4.717284202575684, 'learning_rate': 2.1922428330522768e-05, 'epoch': 4.48}
+{'loss': 1.8101, 'grad_norm': 8.286974906921387, 'learning_rate': 1.854974704890388e-05, 'epoch': 4.56}
+{'loss': 0.6408, 'grad_norm': 7.0066375732421875, 'learning_rate': 1.5177065767284992e-05, 'epoch': 4.64}
+{'loss': 1.402, 'grad_norm': 7.357805252075195, 'learning_rate': 1.1804384485666105e-05, 'epoch': 4.72}
+{'loss': 1.4777, 'grad_norm': 1.2308560609817505, 'learning_rate': 8.431703204047219e-06, 'epoch': 4.8}
+{'loss': 1.4966, 'grad_norm': 1.4291645288467407, 'learning_rate': 5.059021922428331e-06, 'epoch': 4.88}
+{'loss': 1.5484, 'grad_norm': 5.719563961029053, 'learning_rate': 1.6863406408094434e-06, 'epoch': 4.96}
+{'train_runtime': 238.3958, 'train_samples_per_second': 10.487, 'train_steps_per_second': 2.622, 'train_loss': 1.6585580184936524, 'epoch': 5.0}
+  [grad_cb] yahoo: flushed 31 entries  (31 total steps, every 20)  R:×32  W×32
+  [KL] Phase 2 complete: steps=625  mean_kl=0.0854  tail_kl=0.0502  stop_step=None  threshold=0.2374
+  [KL] Save-time KL_final on val (<=50 batches) = 0.5096  (diagnostic only — no blending)
+  [fisher] yahoo: F(R)=1.208e-02  F(W)=0.000e+00  F(b)=0.000e+00
+  [memory] Task 'yahoo' → G0 [OVERWRITE — KL-restrained trained W stored as new group state]  groupwise_ivs=32 (T1+T2+T3_f)  t3l_taskwise_ivs=0 (T3_l)  kl_final=0.5096  (now 2 tasks in G0: ['C-STANCE', 'yahoo'])
+Directory '/projects/bfwa/mhossen1/CRAFT-CL/explore/Beta_dose_response/outputs/CRAFT_CL_betadose_0p05_llama32_1b_15task_2026-08-20_03-26-10/ckpt_10.yahoo.20260820045405454125' already exists.
+  Checkpoint saved → /projects/bfwa/mhossen1/CRAFT-CL/explore/Beta_dose_response/outputs/CRAFT_CL_betadose_0p05_llama32_1b_15task_2026-08-20_03-26-10/ckpt_10.yahoo.20260820045405454125
+
+  Backward evaluation after yahoo:
+  Task               Score    Forgetting
+  ---------------  -------  ------------
+  [gpu_mem] before backward-eval: 3.32 GiB allocated
+  [build_reft] R restored on 32 layers.
+  C-STANCE score: 0.3300
+  C-STANCE          0.3300       +0.1200
+  [build_reft] R restored on 32 layers.
+  FOMC score: 0.0000
+  FOMC              0.0000       +0.5900
+  [build_reft] R restored on 32 layers.
+  MeetingBank ROUGE-L: 0.1537
+  MeetingBank       0.1537       +0.0000
+  [build_reft] R restored on 32 layers.
+  Py150 score: 0.3175
+  Py150             0.3175       +0.1105
+  [build_reft] R restored on 32 layers.
+  ScienceQA score: 0.5600
+  ScienceQA         0.5600       +0.0500
+  [build_reft] R restored on 32 layers.
+  NumGLUE-cm score: 0.1463
+  NumGLUE-cm        0.1463       +0.1464
+  [build_reft] R restored on 32 layers.
+  NumGLUE-ds score: 0.3300
+  NumGLUE-ds        0.3300       +0.0300
+  [build_reft] R restored on 32 layers.
+  20Minuten ROUGE-L (SARI fallback): 0.1504
+  20Minuten         0.1504       +0.0000
+  [build_reft] R restored on 32 layers.
+  dbpedia accuracy: 0.9300
+  dbpedia           0.9300       +0.0400
+  [build_reft] R restored on 32 layers.
+  amazon accuracy: 0.5800
+  amazon            0.5800       +0.0000
+  [build_reft] R restored on 32 layers.
+  yahoo accuracy: 0.6300
+  yahoo             0.6300    (just trained)
+  [gpu_mem] after backward-eval:  3.32 GiB allocated
+
+  Mean forgetting: +0.1087
+
+========================================================================
+  CL step 12/15:  agnews  [epochs=5  pos=f15+l15]  (ref=cls)
+========================================================================
+
+loading data for dataset:  /projects/bfwa/mhossen1/CRAFT-CL/dataset/TRACE_Benchmark/LLM-CL-Benchmark_500/agnews/train.json
+  Training samples: 500
+  [label-check] task=agnews  non-masked=2/132 (1.52%)  first 20 label-ids=[10343, 128009]
+loading data for dataset:  /projects/bfwa/mhossen1/CRAFT-CL/dataset/TRACE_Benchmark/LLM-CL-Benchmark_500/agnews/eval.json
+  Eval set built: n=100
+
+  [kl_routing] Task 'agnews' against 4 existing group(s)  (warmup_steps=100  probe_size=16  threshold=0.7000  top_k=64  T=2.00  normalize=ratio  min_dkg=0.0100)
+  [task_probe] Built probe from current task (16 examples) — no past-task data.
+  [build_reft] R restored on 32 layers.
+  [kl_routing] Running warmup (100 steps) on 'agnews' ...
+{'loss': 1.8601, 'grad_norm': 21.91663360595703, 'learning_rate': 0.00015000000000000001, 'epoch': 0.2}
+{'loss': 0.609, 'grad_norm': 2.0429985523223877, 'learning_rate': 0.0001, 'epoch': 0.4}
+{'loss': 0.3513, 'grad_norm': 0.9933089017868042, 'learning_rate': 5e-05, 'epoch': 0.6}
+{'loss': 0.4342, 'grad_norm': 1.560730218887329, 'learning_rate': 0.0, 'epoch': 0.8}
+{'train_runtime': 25.4067, 'train_samples_per_second': 15.744, 'train_steps_per_second': 3.936, 'train_loss': 0.8136287498474121, 'epoch': 0.8}
+  [kl_routing] G0 (n=2, tasks=['C-STANCE', 'yahoo']) — forward + KL ...
+  [build_reft] R restored on 32 layers.
+  [kl_routing] G0  D_KG=0.2402
+  [kl_routing] G1 (n=5, tasks=['FOMC', 'NumGLUE-cm', 'NumGLUE-ds', 'dbpedia', 'amazon']) — forward + KL ...
+  [build_reft] R restored on 32 layers.
+  [kl_routing] G1  D_KG=0.1962
+  [kl_routing] G2 (n=1, tasks=['MeetingBank']) — forward + KL ...
+  [build_reft] R restored on 32 layers.
+  [kl_routing] G2  D_KG=0.4526
+  [kl_routing] G3 (n=3, tasks=['Py150', 'ScienceQA', '20Minuten']) — forward + KL ...
+  [build_reft] R restored on 32 layers.
+  [kl_routing] G3  D_KG=0.3152
+  [kl_routing] G0  distance(ratio)=0.5307  (D_KG=0.2402  D_KG_max=0.4526)
+  [kl_routing] G1  distance(ratio)=0.4336  (D_KG=0.1962  D_KG_max=0.4526)
+  [kl_routing] G2  distance(ratio)=1.0000  (D_KG=0.4526  D_KG_max=0.4526)
+  [kl_routing] G3  distance(ratio)=0.6965  (D_KG=0.3152  D_KG_max=0.4526)
+  [kl_routing] closest=G1  distance=0.4336  threshold=0.7000  → JOIN G1
+
+  [Phase 1 complete] kl_routing for 'agnews':
+    n_existing_groups=4  mode=raw  router=kl_routing  aggregate=?  normalize=?  threshold=0.700
+     gid n_tk     t1_f    t1_l    t2_f    t2_l      raw    norm   tasks
+    -------------------------------------------------------------------
+    G0      2      nan     nan     nan     nan    0.531   0.531   C-STANCE,yahoo
+    G1      5      nan     nan     nan     nan    0.434   0.434   FOMC,NumGLUE-cm,NumGLUE-ds,d
+    G2      1      nan     nan     nan     nan    1.000   1.000   MeetingBank
+    G3      3      nan     nan     nan     nan    0.696   0.696   Py150,ScienceQA,20Minuten
+    closest=G1  iv_match: agg=0/0
+    → decision: join_G1  (assigned_gid=G1)
+
+  [Phase 2] Full training ...
+  [build_reft] R restored on 32 layers.
+  Warm-starting from group G1.
+trainable intervention params: 1,048,832 || trainable model params: 0
+model params: 1,235,814,400 || trainable%: 0.08486970211708166
+  [StratOptim]
+    T1_groupwise        lr=2.00e-04  params=327,760
+    T2_groupwise        lr=2.00e-04  params=327,760
+    T3f_groupwise       lr=2.00e-04  params=196,656
+    T3l_taskwise        lr=2.00e-04  params=196,656
+  [build_reft] R restored on 32 layers.
+  [KL] Building KL-Razor controller (anchor=G1, 32 groupwise iv-keys, mode=output, β=0.050, normalized, evict).
+{'loss': 6.6742, 'grad_norm': 60.65496063232422, 'learning_rate': 6.25e-05, 'epoch': 0.08}
+{'loss': 1.6753, 'grad_norm': 24.354209899902344, 'learning_rate': 0.000125, 'epoch': 0.16}
+{'loss': 0.9582, 'grad_norm': 12.210780143737793, 'learning_rate': 0.0001875, 'epoch': 0.24}
+{'loss': 0.748, 'grad_norm': 20.849422454833984, 'learning_rate': 0.0001973018549747049, 'epoch': 0.32}
+{'loss': 0.7618, 'grad_norm': 10.038152694702148, 'learning_rate': 0.000193929173693086, 'epoch': 0.4}
+{'loss': 0.7071, 'grad_norm': 2.340477466583252, 'learning_rate': 0.00019055649241146713, 'epoch': 0.48}
+{'loss': 0.4865, 'grad_norm': 8.105134010314941, 'learning_rate': 0.00018718381112984824, 'epoch': 0.56}
+{'loss': 0.6077, 'grad_norm': 5.356091022491455, 'learning_rate': 0.00018381112984822934, 'epoch': 0.64}
+{'loss': 0.3538, 'grad_norm': 3.076740026473999, 'learning_rate': 0.00018043844856661047, 'epoch': 0.72}
+{'loss': 0.3999, 'grad_norm': 15.609429359436035, 'learning_rate': 0.00017706576728499158, 'epoch': 0.8}
+{'loss': 0.2288, 'grad_norm': 9.023451805114746, 'learning_rate': 0.00017369308600337268, 'epoch': 0.88}
+{'loss': 0.2647, 'grad_norm': 6.724677562713623, 'learning_rate': 0.00017032040472175381, 'epoch': 0.96}
+  [KL] First-epoch done at step 125: KL mean=0.0847 std=0.1143 → early-stop threshold = 0.1990
+{'loss': 0.3194, 'grad_norm': 16.918176651000977, 'learning_rate': 0.00016694772344013492, 'epoch': 1.04}
+  [KL] Early stop at step 134: rolling mean (last 20) = 0.2174 > threshold 0.1990.
+{'train_runtime': 44.1473, 'train_samples_per_second': 56.629, 'train_steps_per_second': 14.157, 'train_loss': 1.0615305017541956, 'epoch': 1.08}
+  [grad_cb] agnews: flushed 6 entries  (6 total steps, every 20)  R:×32  W×32
+  [KL] Phase 2 complete: steps=135  mean_kl=0.0937  tail_kl=0.2174  stop_step=134  threshold=0.1990
+  [KL] Save-time KL_final on val (<=50 batches) = 0.4077  (diagnostic only — no blending)
+  [fisher] agnews: F(R)=1.965e+00  F(W)=0.000e+00  F(b)=0.000e+00
+  [memory] Task 'agnews' → G1 [OVERWRITE — KL-restrained trained W stored as new group state]  groupwise_ivs=32 (T1+T2+T3_f)  t3l_taskwise_ivs=0 (T3_l)  kl_final=0.4077  (now 6 tasks in G1: ['FOMC', 'NumGLUE-cm', 'NumGLUE-ds', 'dbpedia', 'amazon', 'agnews'])
+Directory '/projects/bfwa/mhossen1/CRAFT-CL/explore/Beta_dose_response/outputs/CRAFT_CL_betadose_0p05_llama32_1b_15task_2026-08-20_03-26-10/ckpt_11.agnews.20260820050255247372' already exists.
+  Checkpoint saved → /projects/bfwa/mhossen1/CRAFT-CL/explore/Beta_dose_response/outputs/CRAFT_CL_betadose_0p05_llama32_1b_15task_2026-08-20_03-26-10/ckpt_11.agnews.20260820050255247372
+
+  Backward evaluation after agnews:
+  Task               Score    Forgetting
+  ---------------  -------  ------------
+  [gpu_mem] before backward-eval: 3.32 GiB allocated
+  [build_reft] R restored on 32 layers.
+  C-STANCE score: 0.3300
+  C-STANCE          0.3300       +0.1200
+  [build_reft] R restored on 32 layers.
+  FOMC score: 0.1200
+  FOMC              0.1200       +0.4700
+  [build_reft] R restored on 32 layers.
+  MeetingBank ROUGE-L: 0.1537
+  MeetingBank       0.1537       +0.0000
+  [build_reft] R restored on 32 layers.
+  Py150 score: 0.3175
+  Py150             0.3175       +0.1105
+  [build_reft] R restored on 32 layers.
+  ScienceQA score: 0.5600
+  ScienceQA         0.5600       +0.0500
+  [build_reft] R restored on 32 layers.
+  NumGLUE-cm score: 0.1220
+  NumGLUE-cm        0.1220       +0.1707
+  [build_reft] R restored on 32 layers.
+  NumGLUE-ds score: 0.2600
+  NumGLUE-ds        0.2600       +0.1000
+  [build_reft] R restored on 32 layers.
+  20Minuten ROUGE-L (SARI fallback): 0.1504
+  20Minuten         0.1504       +0.0000
+  [build_reft] R restored on 32 layers.
+  dbpedia accuracy: 0.9200
+  dbpedia           0.9200       +0.0500
+  [build_reft] R restored on 32 layers.
+  amazon accuracy: 0.5300
+  amazon            0.5300       +0.0500
+  [build_reft] R restored on 32 layers.
+  yahoo accuracy: 0.6300
+  yahoo             0.6300       +0.0000
+  [build_reft] R restored on 32 layers.
+  agnews accuracy: 0.8500
+  agnews            0.8500    (just trained)
+  [gpu_mem] after backward-eval:  3.32 GiB allocated
+
+  Mean forgetting: +0.1019
+
+========================================================================
+  CL step 13/15:  yelp  [epochs=5  pos=f15+l15]  (ref=cls)
+========================================================================
+
+loading data for dataset:  /projects/bfwa/mhossen1/CRAFT-CL/dataset/TRACE_Benchmark/LLM-CL-Benchmark_500/yelp/train.json
+  Training samples: 500
+  [label-check] task=yelp  non-masked=2/260 (0.77%)  first 20 label-ids=[43324, 128009]
+loading data for dataset:  /projects/bfwa/mhossen1/CRAFT-CL/dataset/TRACE_Benchmark/LLM-CL-Benchmark_500/yelp/eval.json
+  Eval set built: n=100
+
+  [kl_routing] Task 'yelp' against 4 existing group(s)  (warmup_steps=100  probe_size=16  threshold=0.7000  top_k=64  T=2.00  normalize=ratio  min_dkg=0.0100)
+  [task_probe] Built probe from current task (16 examples) — no past-task data.
+  [build_reft] R restored on 32 layers.
+  [kl_routing] Running warmup (100 steps) on 'yelp' ...
+{'loss': 5.856, 'grad_norm': 11.428088188171387, 'learning_rate': 0.00015000000000000001, 'epoch': 0.2}
+{'loss': 5.5816, 'grad_norm': 8.453180313110352, 'learning_rate': 0.0001, 'epoch': 0.4}
+{'loss': 5.517, 'grad_norm': 2.115518093109131, 'learning_rate': 5e-05, 'epoch': 0.6}
+{'loss': 5.0589, 'grad_norm': 11.340415954589844, 'learning_rate': 0.0, 'epoch': 0.8}
+{'train_runtime': 29.3086, 'train_samples_per_second': 13.648, 'train_steps_per_second': 3.412, 'train_loss': 5.503367233276367, 'epoch': 0.8}
+  [kl_routing] G0 (n=2, tasks=['C-STANCE', 'yahoo']) — forward + KL ...
+  [build_reft] R restored on 32 layers.
+  [kl_routing] G0  D_KG=0.0718
+  [kl_routing] G1 (n=6, tasks=['FOMC', 'NumGLUE-cm', 'NumGLUE-ds', 'dbpedia', 'amazon', 'agnews']) — forward + KL ...
+  [build_reft] R restored on 32 layers.
+  [kl_routing] G1  D_KG=0.1097
+  [kl_routing] G2 (n=1, tasks=['MeetingBank']) — forward + KL ...
+  [build_reft] R restored on 32 layers.
+  [kl_routing] G2  D_KG=0.3617
+  [kl_routing] G3 (n=3, tasks=['Py150', 'ScienceQA', '20Minuten']) — forward + KL ...
+  [build_reft] R restored on 32 layers.
+  [kl_routing] G3  D_KG=0.1379
+  [kl_routing] G0  distance(ratio)=0.1985  (D_KG=0.0718  D_KG_max=0.3617)
+  [kl_routing] G1  distance(ratio)=0.3033  (D_KG=0.1097  D_KG_max=0.3617)
+  [kl_routing] G2  distance(ratio)=1.0000  (D_KG=0.3617  D_KG_max=0.3617)
+  [kl_routing] G3  distance(ratio)=0.3812  (D_KG=0.1379  D_KG_max=0.3617)
+  [kl_routing] closest=G0  distance=0.1985  threshold=0.7000  → JOIN G0
+
+  [Phase 1 complete] kl_routing for 'yelp':
+    n_existing_groups=4  mode=raw  router=kl_routing  aggregate=?  normalize=?  threshold=0.700
+     gid n_tk     t1_f    t1_l    t2_f    t2_l      raw    norm   tasks
+    -------------------------------------------------------------------
+    G0      2      nan     nan     nan     nan    0.198   0.198   C-STANCE,yahoo
+    G1      6      nan     nan     nan     nan    0.303   0.303   FOMC,NumGLUE-cm,NumGLUE-ds,d
+    G2      1      nan     nan     nan     nan    1.000   1.000   MeetingBank
+    G3      3      nan     nan     nan     nan    0.381   0.381   Py150,ScienceQA,20Minuten
+    closest=G0  iv_match: agg=0/0
+    → decision: join_G0  (assigned_gid=G0)
+
+  [Phase 2] Full training ...
+  [build_reft] R restored on 32 layers.
+  Warm-starting from group G0.
+trainable intervention params: 1,048,832 || trainable model params: 0
+model params: 1,235,814,400 || trainable%: 0.08486970211708166
+  [StratOptim]
+    T1_groupwise        lr=2.00e-04  params=327,760
+    T2_groupwise        lr=2.00e-04  params=327,760
+    T3f_groupwise       lr=2.00e-04  params=196,656
+    T3l_taskwise        lr=2.00e-04  params=196,656
+  [build_reft] R restored on 32 layers.
+  [KL] Building KL-Razor controller (anchor=G0, 32 groupwise iv-keys, mode=output, β=0.050, normalized, evict).
+{'loss': 5.0449, 'grad_norm': 644.3165283203125, 'learning_rate': 6.25e-05, 'epoch': 0.08}
+{'loss': 4.88, 'grad_norm': 18.604488372802734, 'learning_rate': 0.000125, 'epoch': 0.16}
+{'loss': 3.5162, 'grad_norm': 5.339901447296143, 'learning_rate': 0.0001875, 'epoch': 0.24}
+{'loss': 4.9733, 'grad_norm': 18.416118621826172, 'learning_rate': 0.0001973018549747049, 'epoch': 0.32}
+{'loss': 3.8737, 'grad_norm': 2.0280683040618896, 'learning_rate': 0.000193929173693086, 'epoch': 0.4}
+{'loss': 3.8274, 'grad_norm': 3.3964767456054688, 'learning_rate': 0.00019055649241146713, 'epoch': 0.48}
+{'loss': 3.4606, 'grad_norm': 14.491137504577637, 'learning_rate': 0.00018718381112984824, 'epoch': 0.56}
+{'loss': 3.2349, 'grad_norm': 6.465001106262207, 'learning_rate': 0.00018381112984822934, 'epoch': 0.64}
+{'loss': 4.5256, 'grad_norm': 7.18934440612793, 'learning_rate': 0.00018043844856661047, 'epoch': 0.72}
+{'loss': 2.7155, 'grad_norm': 6.324394702911377, 'learning_rate': 0.00017706576728499158, 'epoch': 0.8}
+{'loss': 4.2833, 'grad_norm': 12.529337882995605, 'learning_rate': 0.00017369308600337268, 'epoch': 0.88}
+{'loss': 4.0501, 'grad_norm': 7.7202067375183105, 'learning_rate': 0.00017032040472175381, 'epoch': 0.96}
+  [KL] First-epoch done at step 125: KL mean=0.0187 std=0.0291 → early-stop threshold = 0.0478
+{'loss': 4.2479, 'grad_norm': 16.741939544677734, 'learning_rate': 0.00016694772344013492, 'epoch': 1.04}
+{'loss': 3.4545, 'grad_norm': 6.63276481628418, 'learning_rate': 0.00016357504215851602, 'epoch': 1.12}
+{'loss': 3.1502, 'grad_norm': 13.792447090148926, 'learning_rate': 0.00016020236087689715, 'epoch': 1.2}
+{'loss': 3.3972, 'grad_norm': 11.185787200927734, 'learning_rate': 0.00015682967959527826, 'epoch': 1.28}
+{'loss': 2.8119, 'grad_norm': 8.975574493408203, 'learning_rate': 0.00015345699831365936, 'epoch': 1.36}
+{'loss': 2.9564, 'grad_norm': 7.588168144226074, 'learning_rate': 0.0001500843170320405, 'epoch': 1.44}
+{'loss': 3.4869, 'grad_norm': 8.73600959777832, 'learning_rate': 0.0001467116357504216, 'epoch': 1.52}
+{'loss': 3.3237, 'grad_norm': 8.84286880493164, 'learning_rate': 0.0001433389544688027, 'epoch': 1.6}
+{'loss': 3.9498, 'grad_norm': 10.10873794555664, 'learning_rate': 0.00013996627318718383, 'epoch': 1.68}
+{'loss': 4.456, 'grad_norm': 3.769953966140747, 'learning_rate': 0.00013659359190556494, 'epoch': 1.76}
+{'loss': 2.9876, 'grad_norm': 6.2308735847473145, 'learning_rate': 0.00013322091062394604, 'epoch': 1.84}
+{'loss': 3.4325, 'grad_norm': 9.384329795837402, 'learning_rate': 0.00012984822934232717, 'epoch': 1.92}
+{'loss': 3.689, 'grad_norm': 10.428633689880371, 'learning_rate': 0.00012647554806070828, 'epoch': 2.0}
+{'loss': 3.001, 'grad_norm': 18.829748153686523, 'learning_rate': 0.00012310286677908938, 'epoch': 2.08}
+{'loss': 3.2953, 'grad_norm': 4.54729700088501, 'learning_rate': 0.0001197301854974705, 'epoch': 2.16}
+{'loss': 3.7035, 'grad_norm': 7.740320205688477, 'learning_rate': 0.0001163575042158516, 'epoch': 2.24}
+{'loss': 3.6112, 'grad_norm': 1.8783857822418213, 'learning_rate': 0.00011298482293423271, 'epoch': 2.32}
+{'loss': 3.8905, 'grad_norm': 5.9944844245910645, 'learning_rate': 0.00010961214165261384, 'epoch': 2.4}
+{'loss': 3.0703, 'grad_norm': 2.1843082904815674, 'learning_rate': 0.00010623946037099494, 'epoch': 2.48}
+{'loss': 3.628, 'grad_norm': 0.9735201597213745, 'learning_rate': 0.00010286677908937605, 'epoch': 2.56}
+{'loss': 3.8191, 'grad_norm': 27.41391372680664, 'learning_rate': 9.949409780775717e-05, 'epoch': 2.64}
+{'loss': 3.3325, 'grad_norm': 9.84493637084961, 'learning_rate': 9.612141652613828e-05, 'epoch': 2.72}
+{'loss': 3.2789, 'grad_norm': 2.3498926162719727, 'learning_rate': 9.27487352445194e-05, 'epoch': 2.8}
+{'loss': 3.1077, 'grad_norm': 8.078530311584473, 'learning_rate': 8.93760539629005e-05, 'epoch': 2.88}
+{'loss': 2.9119, 'grad_norm': 6.699854850769043, 'learning_rate': 8.600337268128162e-05, 'epoch': 2.96}
+{'loss': 4.7313, 'grad_norm': 1.5671725273132324, 'learning_rate': 8.263069139966274e-05, 'epoch': 3.04}
+{'loss': 3.4858, 'grad_norm': 6.854708194732666, 'learning_rate': 7.925801011804385e-05, 'epoch': 3.12}
+{'loss': 4.0181, 'grad_norm': 5.464513778686523, 'learning_rate': 7.588532883642496e-05, 'epoch': 3.2}
+{'loss': 3.6451, 'grad_norm': 5.135235786437988, 'learning_rate': 7.251264755480608e-05, 'epoch': 3.28}
+{'loss': 2.3022, 'grad_norm': 6.698757648468018, 'learning_rate': 6.913996627318719e-05, 'epoch': 3.36}
+{'loss': 3.0224, 'grad_norm': 16.89446258544922, 'learning_rate': 6.57672849915683e-05, 'epoch': 3.44}
+{'loss': 4.3251, 'grad_norm': 0.6058003306388855, 'learning_rate': 6.239460370994942e-05, 'epoch': 3.52}
+{'loss': 4.1426, 'grad_norm': 13.817779541015625, 'learning_rate': 5.9021922428330526e-05, 'epoch': 3.6}
+{'loss': 2.7204, 'grad_norm': 5.690927505493164, 'learning_rate': 5.564924114671164e-05, 'epoch': 3.68}
+{'loss': 3.6041, 'grad_norm': 9.660418510437012, 'learning_rate': 5.2276559865092755e-05, 'epoch': 3.76}
+{'loss': 4.6922, 'grad_norm': 5.992156982421875, 'learning_rate': 4.8903878583473866e-05, 'epoch': 3.84}
+{'loss': 3.6216, 'grad_norm': 5.73065185546875, 'learning_rate': 4.553119730185498e-05, 'epoch': 3.92}
+{'loss': 2.843, 'grad_norm': 3.4672224521636963, 'learning_rate': 4.215851602023609e-05, 'epoch': 4.0}
+{'loss': 3.4004, 'grad_norm': 8.170709609985352, 'learning_rate': 3.8785834738617206e-05, 'epoch': 4.08}
+{'loss': 3.0676, 'grad_norm': 2.1015238761901855, 'learning_rate': 3.541315345699832e-05, 'epoch': 4.16}
+{'loss': 3.3902, 'grad_norm': 3.2337234020233154, 'learning_rate': 3.204047217537943e-05, 'epoch': 4.24}
+{'loss': 3.817, 'grad_norm': 5.644357681274414, 'learning_rate': 2.8667790893760543e-05, 'epoch': 4.32}
+{'loss': 2.9546, 'grad_norm': 10.370013236999512, 'learning_rate': 2.5295109612141654e-05, 'epoch': 4.4}
+{'loss': 3.8777, 'grad_norm': 5.585411548614502, 'learning_rate': 2.1922428330522768e-05, 'epoch': 4.48}
+{'loss': 3.0947, 'grad_norm': 3.6363701820373535, 'learning_rate': 1.854974704890388e-05, 'epoch': 4.56}
+{'loss': 3.42, 'grad_norm': 5.030140399932861, 'learning_rate': 1.5177065767284992e-05, 'epoch': 4.64}
+{'loss': 3.0047, 'grad_norm': 7.2713446617126465, 'learning_rate': 1.1804384485666105e-05, 'epoch': 4.72}
+{'loss': 3.4779, 'grad_norm': 27.91468620300293, 'learning_rate': 8.431703204047219e-06, 'epoch': 4.8}
+{'loss': 2.528, 'grad_norm': 9.320467948913574, 'learning_rate': 5.059021922428331e-06, 'epoch': 4.88}
+{'loss': 3.1237, 'grad_norm': 5.0205864906311035, 'learning_rate': 1.6863406408094434e-06, 'epoch': 4.96}
+{'train_runtime': 244.1215, 'train_samples_per_second': 10.241, 'train_steps_per_second': 2.56, 'train_loss': 3.5589999633789065, 'epoch': 5.0}
+  [grad_cb] yelp: flushed 31 entries  (31 total steps, every 20)  R:×32  W×32
+  [KL] Phase 2 complete: steps=625  mean_kl=0.0174  tail_kl=0.0089  stop_step=None  threshold=0.0478
+  [KL] Save-time KL_final on val (<=50 batches) = 0.1861  (diagnostic only — no blending)
+  [fisher] yelp: F(R)=5.122e-03  F(W)=0.000e+00  F(b)=0.000e+00
+  [memory] Task 'yelp' → G0 [OVERWRITE — KL-restrained trained W stored as new group state]  groupwise_ivs=32 (T1+T2+T3_f)  t3l_taskwise_ivs=0 (T3_l)  kl_final=0.1861  (now 3 tasks in G0: ['C-STANCE', 'yahoo', 'yelp'])
+Directory '/projects/bfwa/mhossen1/CRAFT-CL/explore/Beta_dose_response/outputs/CRAFT_CL_betadose_0p05_llama32_1b_15task_2026-08-20_03-26-10/ckpt_12.yelp.20260820051523257348' already exists.
+  Checkpoint saved → /projects/bfwa/mhossen1/CRAFT-CL/explore/Beta_dose_response/outputs/CRAFT_CL_betadose_0p05_llama32_1b_15task_2026-08-20_03-26-10/ckpt_12.yelp.20260820051523257348
+
+  Backward evaluation after yelp:
+  Task               Score    Forgetting
+  ---------------  -------  ------------
+  [gpu_mem] before backward-eval: 3.32 GiB allocated
+  [build_reft] R restored on 32 layers.
+  C-STANCE score: 0.2300
+  C-STANCE          0.2300       +0.2200
+  [build_reft] R restored on 32 layers.
+  FOMC score: 0.1200
+  FOMC              0.1200       +0.4700
+  [build_reft] R restored on 32 layers.
+  MeetingBank ROUGE-L: 0.1537
+  MeetingBank       0.1537       +0.0000
+  [build_reft] R restored on 32 layers.
+  Py150 score: 0.3175
+  Py150             0.3175       +0.1105
+  [build_reft] R restored on 32 layers.
+  ScienceQA score: 0.5600
+  ScienceQA         0.5600       +0.0500
+  [build_reft] R restored on 32 layers.
+  NumGLUE-cm score: 0.1220
+  NumGLUE-cm        0.1220       +0.1707
+  [build_reft] R restored on 32 layers.
+  NumGLUE-ds score: 0.2600
+  NumGLUE-ds        0.2600       +0.1000
+  [build_reft] R restored on 32 layers.
+  20Minuten ROUGE-L (SARI fallback): 0.1504
+  20Minuten         0.1504       +0.0000
+  [build_reft] R restored on 32 layers.
+  dbpedia accuracy: 0.9200
+  dbpedia           0.9200       +0.0500
+  [build_reft] R restored on 32 layers.
+  amazon accuracy: 0.5300
+  amazon            0.5300       +0.0500
+  [build_reft] R restored on 32 layers.
+  yahoo accuracy: 0.4200
+  yahoo             0.4200       +0.2100
+  [build_reft] R restored on 32 layers.
+  agnews accuracy: 0.8500
+  agnews            0.8500       +0.0000
+  [build_reft] R restored on 32 layers.
+  yelp accuracy: 0.5900
+  yelp              0.5900    (just trained)
+  [gpu_mem] after backward-eval:  3.32 GiB allocated
+
+  Mean forgetting: +0.1193
+
+========================================================================
+  CL step 14/15:  BoolQA  [epochs=5  pos=f15+l15]  (ref=cls)
+========================================================================
+
+loading data for dataset:  /projects/bfwa/mhossen1/CRAFT-CL/dataset/TRACE_Benchmark/LLM-CL-Benchmark_500/BoolQA/train.json
+  Training samples: 500
+  [label-check] task=BoolQA  non-masked=2/197 (1.02%)  first 20 label-ids=[2575, 128009]
+loading data for dataset:  /projects/bfwa/mhossen1/CRAFT-CL/dataset/TRACE_Benchmark/LLM-CL-Benchmark_500/BoolQA/eval.json
+  Eval set built: n=100
+
+  [kl_routing] Task 'BoolQA' against 4 existing group(s)  (warmup_steps=100  probe_size=16  threshold=0.7000  top_k=64  T=2.00  normalize=ratio  min_dkg=0.0100)
+  [task_probe] Built probe from current task (16 examples) — no past-task data.
+  [build_reft] R restored on 32 layers.
+  [kl_routing] Running warmup (100 steps) on 'BoolQA' ...
+{'loss': 2.0174, 'grad_norm': 4.542479515075684, 'learning_rate': 0.00015000000000000001, 'epoch': 0.2}
+{'loss': 1.0598, 'grad_norm': 19.80829620361328, 'learning_rate': 0.0001, 'epoch': 0.4}
+{'loss': 0.9273, 'grad_norm': 3.5366179943084717, 'learning_rate': 5e-05, 'epoch': 0.6}
+{'loss': 0.9504, 'grad_norm': 14.309271812438965, 'learning_rate': 0.0, 'epoch': 0.8}
+{'train_runtime': 27.2547, 'train_samples_per_second': 14.676, 'train_steps_per_second': 3.669, 'train_loss': 1.2387304878234864, 'epoch': 0.8}
+  [kl_routing] G0 (n=3, tasks=['C-STANCE', 'yahoo', 'yelp']) — forward + KL ...
+  [build_reft] R restored on 32 layers.
+  [kl_routing] G0  D_KG=0.2350
+  [kl_routing] G1 (n=6, tasks=['FOMC', 'NumGLUE-cm', 'NumGLUE-ds', 'dbpedia', 'amazon', 'agnews']) — forward + KL ...
+  [build_reft] R restored on 32 layers.
+  [kl_routing] G1  D_KG=0.2910
+  [kl_routing] G2 (n=1, tasks=['MeetingBank']) — forward + KL ...
+  [build_reft] R restored on 32 layers.
+  [kl_routing] G2  D_KG=0.6006
+  [kl_routing] G3 (n=3, tasks=['Py150', 'ScienceQA', '20Minuten']) — forward + KL ...
+  [build_reft] R restored on 32 layers.
+  [kl_routing] G3  D_KG=0.5250
+  [kl_routing] G0  distance(ratio)=0.3913  (D_KG=0.2350  D_KG_max=0.6006)
+  [kl_routing] G1  distance(ratio)=0.4845  (D_KG=0.2910  D_KG_max=0.6006)
+  [kl_routing] G2  distance(ratio)=1.0000  (D_KG=0.6006  D_KG_max=0.6006)
+  [kl_routing] G3  distance(ratio)=0.8742  (D_KG=0.5250  D_KG_max=0.6006)
+  [kl_routing] closest=G0  distance=0.3913  threshold=0.7000  → JOIN G0
+
+  [Phase 1 complete] kl_routing for 'BoolQA':
+    n_existing_groups=4  mode=raw  router=kl_routing  aggregate=?  normalize=?  threshold=0.700
+     gid n_tk     t1_f    t1_l    t2_f    t2_l      raw    norm   tasks
+    -------------------------------------------------------------------
+    G0      3      nan     nan     nan     nan    0.391   0.391   C-STANCE,yahoo,yelp
+    G1      6      nan     nan     nan     nan    0.484   0.484   FOMC,NumGLUE-cm,NumGLUE-ds,d
+    G2      1      nan     nan     nan     nan    1.000   1.000   MeetingBank
+    G3      3      nan     nan     nan     nan    0.874   0.874   Py150,ScienceQA,20Minuten
+    closest=G0  iv_match: agg=0/0
+    → decision: join_G0  (assigned_gid=G0)
+
+  [Phase 2] Full training ...
+  [build_reft] R restored on 32 layers.
+  Warm-starting from group G0.
+trainable intervention params: 1,048,832 || trainable model params: 0
+model params: 1,235,814,400 || trainable%: 0.08486970211708166
+  [StratOptim]
+    T1_groupwise        lr=2.00e-04  params=327,760
+    T2_groupwise        lr=2.00e-04  params=327,760
+    T3f_groupwise       lr=2.00e-04  params=196,656
+    T3l_taskwise        lr=2.00e-04  params=196,656
+  [build_reft] R restored on 32 layers.
+  [KL] Building KL-Razor controller (anchor=G0, 32 groupwise iv-keys, mode=output, β=0.050, normalized, evict).
+{'loss': 1.8486, 'grad_norm': 60.43913650512695, 'learning_rate': 6.25e-05, 'epoch': 0.08}
+{'loss': 1.045, 'grad_norm': 15.719850540161133, 'learning_rate': 0.000125, 'epoch': 0.16}
+{'loss': 1.3003, 'grad_norm': 17.098438262939453, 'learning_rate': 0.0001875, 'epoch': 0.24}
+{'loss': 1.076, 'grad_norm': 8.030840873718262, 'learning_rate': 0.0001973018549747049, 'epoch': 0.32}
+{'loss': 1.0842, 'grad_norm': 3.899627923965454, 'learning_rate': 0.000193929173693086, 'epoch': 0.4}
+{'loss': 1.0778, 'grad_norm': 3.05725359916687, 'learning_rate': 0.00019055649241146713, 'epoch': 0.48}
+{'loss': 0.7158, 'grad_norm': 5.137188911437988, 'learning_rate': 0.00018718381112984824, 'epoch': 0.56}
+{'loss': 0.6527, 'grad_norm': 9.72395133972168, 'learning_rate': 0.00018381112984822934, 'epoch': 0.64}
+{'loss': 0.8001, 'grad_norm': 1.9219175577163696, 'learning_rate': 0.00018043844856661047, 'epoch': 0.72}
+{'loss': 0.9438, 'grad_norm': 4.061288356781006, 'learning_rate': 0.00017706576728499158, 'epoch': 0.8}
+{'loss': 1.0267, 'grad_norm': 4.975917816162109, 'learning_rate': 0.00017369308600337268, 'epoch': 0.88}
+{'loss': 0.7668, 'grad_norm': 2.238828182220459, 'learning_rate': 0.00017032040472175381, 'epoch': 0.96}
+  [KL] First-epoch done at step 125: KL mean=0.0361 std=0.1706 → early-stop threshold = 0.2067
+{'loss': 0.739, 'grad_norm': 4.103435039520264, 'learning_rate': 0.00016694772344013492, 'epoch': 1.04}
+{'loss': 0.5218, 'grad_norm': 3.004538059234619, 'learning_rate': 0.00016357504215851602, 'epoch': 1.12}
+{'loss': 0.3617, 'grad_norm': 2.0932819843292236, 'learning_rate': 0.00016020236087689715, 'epoch': 1.2}
+{'loss': 0.7866, 'grad_norm': 1.8629037141799927, 'learning_rate': 0.00015682967959527826, 'epoch': 1.28}
+{'loss': 0.7251, 'grad_norm': 3.909207582473755, 'learning_rate': 0.00015345699831365936, 'epoch': 1.36}
+{'loss': 0.8162, 'grad_norm': 2.2115588188171387, 'learning_rate': 0.0001500843170320405, 'epoch': 1.44}
+{'loss': 1.1482, 'grad_norm': 1.2677228450775146, 'learning_rate': 0.0001467116357504216, 'epoch': 1.52}
+{'loss': 1.0825, 'grad_norm': 1.3060879707336426, 'learning_rate': 0.0001433389544688027, 'epoch': 1.6}
+{'loss': 1.0498, 'grad_norm': 9.370141983032227, 'learning_rate': 0.00013996627318718383, 'epoch': 1.68}
+{'loss': 1.1486, 'grad_norm': 5.567861080169678, 'learning_rate': 0.00013659359190556494, 'epoch': 1.76}
+{'loss': 0.6577, 'grad_norm': 2.7307214736938477, 'learning_rate': 0.00013322091062394604, 'epoch': 1.84}
+{'loss': 0.8671, 'grad_norm': 2.3845877647399902, 'learning_rate': 0.00012984822934232717, 'epoch': 1.92}
+{'loss': 0.8968, 'grad_norm': 11.65490436553955, 'learning_rate': 0.00012647554806070828, 'epoch': 2.0}
+{'loss': 0.6816, 'grad_norm': 6.288850784301758, 'learning_rate': 0.00012310286677908938, 'epoch': 2.08}
+{'loss': 0.8321, 'grad_norm': 0.7625169157981873, 'learning_rate': 0.0001197301854974705, 'epoch': 2.16}
+{'loss': 0.8505, 'grad_norm': 2.5525357723236084, 'learning_rate': 0.0001163575042158516, 'epoch': 2.24}
+{'loss': 0.6338, 'grad_norm': 1.6286430358886719, 'learning_rate': 0.00011298482293423271, 'epoch': 2.32}
+{'loss': 0.5963, 'grad_norm': 5.170660018920898, 'learning_rate': 0.00010961214165261384, 'epoch': 2.4}
+{'loss': 0.9944, 'grad_norm': 5.98095178604126, 'learning_rate': 0.00010623946037099494, 'epoch': 2.48}
+{'loss': 0.7495, 'grad_norm': 2.726980686187744, 'learning_rate': 0.00010286677908937605, 'epoch': 2.56}
+{'loss': 0.7733, 'grad_norm': 2.645155668258667, 'learning_rate': 9.949409780775717e-05, 'epoch': 2.64}
+{'loss': 0.868, 'grad_norm': 3.4744017124176025, 'learning_rate': 9.612141652613828e-05, 'epoch': 2.72}
+{'loss': 0.9104, 'grad_norm': 2.226900100708008, 'learning_rate': 9.27487352445194e-05, 'epoch': 2.8}
+{'loss': 0.4828, 'grad_norm': 3.9941189289093018, 'learning_rate': 8.93760539629005e-05, 'epoch': 2.88}
+{'loss': 0.996, 'grad_norm': 3.7281582355499268, 'learning_rate': 8.600337268128162e-05, 'epoch': 2.96}
+{'loss': 0.8404, 'grad_norm': 2.642723321914673, 'learning_rate': 8.263069139966274e-05, 'epoch': 3.04}
+{'loss': 1.0245, 'grad_norm': 3.352281093597412, 'learning_rate': 7.925801011804385e-05, 'epoch': 3.12}
+{'loss': 0.8609, 'grad_norm': 1.8454086780548096, 'learning_rate': 7.588532883642496e-05, 'epoch': 3.2}
+{'loss': 0.7295, 'grad_norm': 4.562610626220703, 'learning_rate': 7.251264755480608e-05, 'epoch': 3.28}
+{'loss': 1.133, 'grad_norm': 3.3355929851531982, 'learning_rate': 6.913996627318719e-05, 'epoch': 3.36}
+{'loss': 1.0793, 'grad_norm': 3.1872732639312744, 'learning_rate': 6.57672849915683e-05, 'epoch': 3.44}
+{'loss': 0.695, 'grad_norm': 3.2484188079833984, 'learning_rate': 6.239460370994942e-05, 'epoch': 3.52}
+{'loss': 1.1413, 'grad_norm': 3.9415340423583984, 'learning_rate': 5.9021922428330526e-05, 'epoch': 3.6}
+{'loss': 0.5513, 'grad_norm': 4.465796947479248, 'learning_rate': 5.564924114671164e-05, 'epoch': 3.68}
+{'loss': 0.5005, 'grad_norm': 2.4985499382019043, 'learning_rate': 5.2276559865092755e-05, 'epoch': 3.76}
+{'loss': 0.6346, 'grad_norm': 3.8448269367218018, 'learning_rate': 4.8903878583473866e-05, 'epoch': 3.84}
+{'loss': 0.5976, 'grad_norm': 2.5561435222625732, 'learning_rate': 4.553119730185498e-05, 'epoch': 3.92}
+{'loss': 0.4825, 'grad_norm': 2.482126235961914, 'learning_rate': 4.215851602023609e-05, 'epoch': 4.0}
+{'loss': 0.5354, 'grad_norm': 4.614665508270264, 'learning_rate': 3.8785834738617206e-05, 'epoch': 4.08}
+{'loss': 0.8885, 'grad_norm': 5.891889572143555, 'learning_rate': 3.541315345699832e-05, 'epoch': 4.16}
+{'loss': 0.5339, 'grad_norm': 3.2537617683410645, 'learning_rate': 3.204047217537943e-05, 'epoch': 4.24}
+{'loss': 0.6517, 'grad_norm': 4.569022178649902, 'learning_rate': 2.8667790893760543e-05, 'epoch': 4.32}
+{'loss': 1.2414, 'grad_norm': 1.673742413520813, 'learning_rate': 2.5295109612141654e-05, 'epoch': 4.4}
+{'loss': 0.4645, 'grad_norm': 2.9320261478424072, 'learning_rate': 2.1922428330522768e-05, 'epoch': 4.48}
+{'loss': 0.9276, 'grad_norm': 0.6681879758834839, 'learning_rate': 1.854974704890388e-05, 'epoch': 4.56}
+{'loss': 0.6631, 'grad_norm': 4.0160603523254395, 'learning_rate': 1.5177065767284992e-05, 'epoch': 4.64}
+{'loss': 0.813, 'grad_norm': 5.227591514587402, 'learning_rate': 1.1804384485666105e-05, 'epoch': 4.72}
+{'loss': 0.641, 'grad_norm': 5.881654739379883, 'learning_rate': 8.431703204047219e-06, 'epoch': 4.8}
+{'loss': 0.6792, 'grad_norm': 8.819978713989258, 'learning_rate': 5.059021922428331e-06, 'epoch': 4.88}
+{'loss': 0.7596, 'grad_norm': 5.365383148193359, 'learning_rate': 1.6863406408094434e-06, 'epoch': 4.96}
+{'train_runtime': 224.9512, 'train_samples_per_second': 11.114, 'train_steps_per_second': 2.778, 'train_loss': 0.8353233249664307, 'epoch': 5.0}
+  [grad_cb] BoolQA: flushed 31 entries  (31 total steps, every 20)  R:×32  W×32
+  [KL] Phase 2 complete: steps=625  mean_kl=0.0205  tail_kl=0.0032  stop_step=None  threshold=0.2067
+  [KL] Save-time KL_final on val (<=50 batches) = 0.2176  (diagnostic only — no blending)
+  [fisher] BoolQA: F(R)=5.842e-04  F(W)=0.000e+00  F(b)=0.000e+00
+  [memory] Task 'BoolQA' → G0 [OVERWRITE — KL-restrained trained W stored as new group state]  groupwise_ivs=32 (T1+T2+T3_f)  t3l_taskwise_ivs=0 (T3_l)  kl_final=0.2176  (now 4 tasks in G0: ['C-STANCE', 'yahoo', 'yelp', 'BoolQA'])
+Directory '/projects/bfwa/mhossen1/CRAFT-CL/explore/Beta_dose_response/outputs/CRAFT_CL_betadose_0p05_llama32_1b_15task_2026-08-20_03-26-10/ckpt_13.BoolQA.20260820052735770853' already exists.
+  Checkpoint saved → /projects/bfwa/mhossen1/CRAFT-CL/explore/Beta_dose_response/outputs/CRAFT_CL_betadose_0p05_llama32_1b_15task_2026-08-20_03-26-10/ckpt_13.BoolQA.20260820052735770853
+
+  Backward evaluation after BoolQA:
+  Task               Score    Forgetting
+  ---------------  -------  ------------
+  [gpu_mem] before backward-eval: 3.32 GiB allocated
+  [build_reft] R restored on 32 layers.
+  C-STANCE score: 0.3500
+  C-STANCE          0.3500       +0.1000
+  [build_reft] R restored on 32 layers.
+  FOMC score: 0.1200
+  FOMC              0.1200       +0.4700
+  [build_reft] R restored on 32 layers.
+  MeetingBank ROUGE-L: 0.1537
+  MeetingBank       0.1537       +0.0000
+  [build_reft] R restored on 32 layers.
+  Py150 score: 0.3175
+  Py150             0.3175       +0.1105
+  [build_reft] R restored on 32 layers.
+  ScienceQA score: 0.5600
+  ScienceQA         0.5600       +0.0500
+  [build_reft] R restored on 32 layers.
+  NumGLUE-cm score: 0.1220
+  NumGLUE-cm        0.1220       +0.1707
+  [build_reft] R restored on 32 layers.
+  NumGLUE-ds score: 0.2600
+  NumGLUE-ds        0.2600       +0.1000
+  [build_reft] R restored on 32 layers.
+  20Minuten ROUGE-L (SARI fallback): 0.1504
+  20Minuten         0.1504       +0.0000
+  [build_reft] R restored on 32 layers.
+  dbpedia accuracy: 0.9200
+  dbpedia           0.9200       +0.0500
+  [build_reft] R restored on 32 layers.
+  amazon accuracy: 0.5300
+  amazon            0.5300       +0.0500
+  [build_reft] R restored on 32 layers.
+  yahoo accuracy: 0.2300
+  yahoo             0.2300       +0.4000
+  [build_reft] R restored on 32 layers.
+  agnews accuracy: 0.8500
+  agnews            0.8500       +0.0000
+  [build_reft] R restored on 32 layers.
+  yelp accuracy: 0.5800
+  yelp              0.5800       +0.0100
+  [build_reft] R restored on 32 layers.
+  BoolQA accuracy: 0.6800
+  BoolQA            0.6800    (just trained)
+  [gpu_mem] after backward-eval:  3.32 GiB allocated
+
+  Mean forgetting: +0.1162
+
+========================================================================
+  CL step 15/15:  QQP  [epochs=5  pos=f15+l15]  (ref=cls)
+========================================================================
+
+loading data for dataset:  /projects/bfwa/mhossen1/CRAFT-CL/dataset/TRACE_Benchmark/LLM-CL-Benchmark_500/QQP/train.json
+  Training samples: 500
+  [label-check] task=QQP  non-masked=2/97 (2.06%)  first 20 label-ids=[2575, 128009]
+loading data for dataset:  /projects/bfwa/mhossen1/CRAFT-CL/dataset/TRACE_Benchmark/LLM-CL-Benchmark_500/QQP/eval.json
+  Eval set built: n=100
+
+  [kl_routing] Task 'QQP' against 4 existing group(s)  (warmup_steps=100  probe_size=16  threshold=0.7000  top_k=64  T=2.00  normalize=ratio  min_dkg=0.0100)
+  [task_probe] Built probe from current task (16 examples) — no past-task data.
+  [build_reft] R restored on 32 layers.
+  [kl_routing] Running warmup (100 steps) on 'QQP' ...
+{'loss': 1.4258, 'grad_norm': 112.1057357788086, 'learning_rate': 0.00015000000000000001, 'epoch': 0.2}
+{'loss': 0.5202, 'grad_norm': 4.527040481567383, 'learning_rate': 0.0001, 'epoch': 0.4}
+{'loss': 0.5156, 'grad_norm': 4.599412441253662, 'learning_rate': 5e-05, 'epoch': 0.6}
+{'loss': 0.3171, 'grad_norm': 2.4991612434387207, 'learning_rate': 0.0, 'epoch': 0.8}
+{'train_runtime': 25.3462, 'train_samples_per_second': 15.781, 'train_steps_per_second': 3.945, 'train_loss': 0.6946637439727783, 'epoch': 0.8}
+  [kl_routing] G0 (n=4, tasks=['C-STANCE', 'yahoo', 'yelp', 'BoolQA']) — forward + KL ...
+  [build_reft] R restored on 32 layers.
+  [kl_routing] G0  D_KG=0.3008
+  [kl_routing] G1 (n=6, tasks=['FOMC', 'NumGLUE-cm', 'NumGLUE-ds', 'dbpedia', 'amazon', 'agnews']) — forward + KL ...
+  [build_reft] R restored on 32 layers.
+  [kl_routing] G1  D_KG=0.2541
+  [kl_routing] G2 (n=1, tasks=['MeetingBank']) — forward + KL ...
+  [build_reft] R restored on 32 layers.
+  [kl_routing] G2  D_KG=0.9739
+  [kl_routing] G3 (n=3, tasks=['Py150', 'ScienceQA', '20Minuten']) — forward + KL ...
+  [build_reft] R restored on 32 layers.
+  [kl_routing] G3  D_KG=0.5728
+  [kl_routing] G0  distance(ratio)=0.3088  (D_KG=0.3008  D_KG_max=0.9739)
+  [kl_routing] G1  distance(ratio)=0.2609  (D_KG=0.2541  D_KG_max=0.9739)
+  [kl_routing] G2  distance(ratio)=1.0000  (D_KG=0.9739  D_KG_max=0.9739)
+  [kl_routing] G3  distance(ratio)=0.5882  (D_KG=0.5728  D_KG_max=0.9739)
+  [kl_routing] closest=G1  distance=0.2609  threshold=0.7000  → JOIN G1
+
+  [Phase 1 complete] kl_routing for 'QQP':
+    n_existing_groups=4  mode=raw  router=kl_routing  aggregate=?  normalize=?  threshold=0.700
+     gid n_tk     t1_f    t1_l    t2_f    t2_l      raw    norm   tasks
+    -------------------------------------------------------------------
+    G0      4      nan     nan     nan     nan    0.309   0.309   C-STANCE,yahoo,yelp,BoolQA
+    G1      6      nan     nan     nan     nan    0.261   0.261   FOMC,NumGLUE-cm,NumGLUE-ds,d
+    G2      1      nan     nan     nan     nan    1.000   1.000   MeetingBank
+    G3      3      nan     nan     nan     nan    0.588   0.588   Py150,ScienceQA,20Minuten
+    closest=G1  iv_match: agg=0/0
+    → decision: join_G1  (assigned_gid=G1)
+
+  [Phase 2] Full training ...
+  [build_reft] R restored on 32 layers.
+  Warm-starting from group G1.
+trainable intervention params: 1,048,832 || trainable model params: 0
+model params: 1,235,814,400 || trainable%: 0.08486970211708166
+  [StratOptim]
+    T1_groupwise        lr=2.00e-04  params=327,760
+    T2_groupwise        lr=2.00e-04  params=327,760
+    T3f_groupwise       lr=2.00e-04  params=196,656
+    T3l_taskwise        lr=2.00e-04  params=196,656
+  [build_reft] R restored on 32 layers.
+  [KL] Building KL-Razor controller (anchor=G1, 32 groupwise iv-keys, mode=output, β=0.050, normalized, evict).
+{'loss': 1.0297, 'grad_norm': 41.83765411376953, 'learning_rate': 6.25e-05, 'epoch': 0.08}
+{'loss': 0.7698, 'grad_norm': 21.395729064941406, 'learning_rate': 0.000125, 'epoch': 0.16}
+{'loss': 0.6304, 'grad_norm': 27.513782501220703, 'learning_rate': 0.0001875, 'epoch': 0.24}
+{'loss': 0.4928, 'grad_norm': 10.71278190612793, 'learning_rate': 0.0001973018549747049, 'epoch': 0.32}
+{'loss': 0.5775, 'grad_norm': 5.335081100463867, 'learning_rate': 0.000193929173693086, 'epoch': 0.4}
+{'loss': 0.4744, 'grad_norm': 7.118146896362305, 'learning_rate': 0.00019055649241146713, 'epoch': 0.48}
+{'loss': 0.4809, 'grad_norm': 7.6836700439453125, 'learning_rate': 0.00018718381112984824, 'epoch': 0.56}
+{'loss': 0.3991, 'grad_norm': 7.006893157958984, 'learning_rate': 0.00018381112984822934, 'epoch': 0.64}
+{'loss': 0.3834, 'grad_norm': 6.246738433837891, 'learning_rate': 0.00018043844856661047, 'epoch': 0.72}
+{'loss': 0.5278, 'grad_norm': 3.6795082092285156, 'learning_rate': 0.00017706576728499158, 'epoch': 0.8}
+{'loss': 0.4143, 'grad_norm': 7.6262922286987305, 'learning_rate': 0.00017369308600337268, 'epoch': 0.88}
+{'loss': 0.4159, 'grad_norm': 1.6495554447174072, 'learning_rate': 0.00017032040472175381, 'epoch': 0.96}
+  [KL] First-epoch done at step 125: KL mean=0.0176 std=0.0179 → early-stop threshold = 0.0355
+{'loss': 0.3771, 'grad_norm': 4.646794319152832, 'learning_rate': 0.00016694772344013492, 'epoch': 1.04}
+{'loss': 0.4867, 'grad_norm': 7.21850061416626, 'learning_rate': 0.00016357504215851602, 'epoch': 1.12}
+{'loss': 0.3773, 'grad_norm': 13.821386337280273, 'learning_rate': 0.00016020236087689715, 'epoch': 1.2}
+{'loss': 0.3787, 'grad_norm': 2.995602607727051, 'learning_rate': 0.00015682967959527826, 'epoch': 1.28}
+{'loss': 0.383, 'grad_norm': 2.794095754623413, 'learning_rate': 0.00015345699831365936, 'epoch': 1.36}
+{'loss': 0.3048, 'grad_norm': 5.936819076538086, 'learning_rate': 0.0001500843170320405, 'epoch': 1.44}
+{'loss': 0.4856, 'grad_norm': 9.685338020324707, 'learning_rate': 0.0001467116357504216, 'epoch': 1.52}
+{'loss': 0.4813, 'grad_norm': 5.962240695953369, 'learning_rate': 0.0001433389544688027, 'epoch': 1.6}
+{'loss': 0.3976, 'grad_norm': 6.688004016876221, 'learning_rate': 0.00013996627318718383, 'epoch': 1.68}
+{'loss': 0.3289, 'grad_norm': 2.358112335205078, 'learning_rate': 0.00013659359190556494, 'epoch': 1.76}
+{'loss': 0.285, 'grad_norm': 2.830364942550659, 'learning_rate': 0.00013322091062394604, 'epoch': 1.84}
+{'loss': 0.3366, 'grad_norm': 14.296590805053711, 'learning_rate': 0.00012984822934232717, 'epoch': 1.92}
+{'loss': 0.3244, 'grad_norm': 15.75252914428711, 'learning_rate': 0.00012647554806070828, 'epoch': 2.0}
+{'loss': 0.2741, 'grad_norm': 3.280217409133911, 'learning_rate': 0.00012310286677908938, 'epoch': 2.08}
+{'loss': 0.2779, 'grad_norm': 6.8364033699035645, 'learning_rate': 0.0001197301854974705, 'epoch': 2.16}
+{'loss': 0.3633, 'grad_norm': 13.478442192077637, 'learning_rate': 0.0001163575042158516, 'epoch': 2.24}
+{'loss': 0.353, 'grad_norm': 12.737996101379395, 'learning_rate': 0.00011298482293423271, 'epoch': 2.32}
+{'loss': 0.2979, 'grad_norm': 7.246335506439209, 'learning_rate': 0.00010961214165261384, 'epoch': 2.4}
+{'loss': 0.2582, 'grad_norm': 5.393528461456299, 'learning_rate': 0.00010623946037099494, 'epoch': 2.48}
+{'loss': 0.458, 'grad_norm': 13.354945182800293, 'learning_rate': 0.00010286677908937605, 'epoch': 2.56}
+{'loss': 0.2859, 'grad_norm': 8.880663871765137, 'learning_rate': 9.949409780775717e-05, 'epoch': 2.64}
+{'loss': 0.3624, 'grad_norm': 11.514028549194336, 'learning_rate': 9.612141652613828e-05, 'epoch': 2.72}
+{'loss': 0.321, 'grad_norm': 6.720539093017578, 'learning_rate': 9.27487352445194e-05, 'epoch': 2.8}
+{'loss': 0.2693, 'grad_norm': 14.549385070800781, 'learning_rate': 8.93760539629005e-05, 'epoch': 2.88}
+{'loss': 0.2365, 'grad_norm': 5.009899139404297, 'learning_rate': 8.600337268128162e-05, 'epoch': 2.96}
+{'loss': 0.2941, 'grad_norm': 21.279993057250977, 'learning_rate': 8.263069139966274e-05, 'epoch': 3.04}
+{'loss': 0.2407, 'grad_norm': 4.494883060455322, 'learning_rate': 7.925801011804385e-05, 'epoch': 3.12}
+{'loss': 0.3977, 'grad_norm': 3.1023921966552734, 'learning_rate': 7.588532883642496e-05, 'epoch': 3.2}
+{'loss': 0.3341, 'grad_norm': 6.581345081329346, 'learning_rate': 7.251264755480608e-05, 'epoch': 3.28}
+{'loss': 0.2921, 'grad_norm': 14.612418174743652, 'learning_rate': 6.913996627318719e-05, 'epoch': 3.36}
+{'loss': 0.1821, 'grad_norm': 3.4496054649353027, 'learning_rate': 6.57672849915683e-05, 'epoch': 3.44}
+{'loss': 0.2581, 'grad_norm': 11.902630805969238, 'learning_rate': 6.239460370994942e-05, 'epoch': 3.52}
+{'loss': 0.2378, 'grad_norm': 5.932446479797363, 'learning_rate': 5.9021922428330526e-05, 'epoch': 3.6}
+{'loss': 0.3515, 'grad_norm': 27.591999053955078, 'learning_rate': 5.564924114671164e-05, 'epoch': 3.68}
+{'loss': 0.3298, 'grad_norm': 2.5153648853302, 'learning_rate': 5.2276559865092755e-05, 'epoch': 3.76}
+{'loss': 0.411, 'grad_norm': 16.289878845214844, 'learning_rate': 4.8903878583473866e-05, 'epoch': 3.84}
+{'loss': 0.1746, 'grad_norm': 4.541314125061035, 'learning_rate': 4.553119730185498e-05, 'epoch': 3.92}
+{'loss': 0.2699, 'grad_norm': 17.21261978149414, 'learning_rate': 4.215851602023609e-05, 'epoch': 4.0}
+{'loss': 0.2925, 'grad_norm': 11.459845542907715, 'learning_rate': 3.8785834738617206e-05, 'epoch': 4.08}
+{'loss': 0.1545, 'grad_norm': 4.345279216766357, 'learning_rate': 3.541315345699832e-05, 'epoch': 4.16}
+{'loss': 0.1213, 'grad_norm': 4.065422534942627, 'learning_rate': 3.204047217537943e-05, 'epoch': 4.24}
+{'loss': 0.3353, 'grad_norm': 13.12962818145752, 'learning_rate': 2.8667790893760543e-05, 'epoch': 4.32}
+{'loss': 0.2604, 'grad_norm': 4.678837776184082, 'learning_rate': 2.5295109612141654e-05, 'epoch': 4.4}
+{'loss': 0.1744, 'grad_norm': 4.362481117248535, 'learning_rate': 2.1922428330522768e-05, 'epoch': 4.48}
+{'loss': 0.1684, 'grad_norm': 7.854522228240967, 'learning_rate': 1.854974704890388e-05, 'epoch': 4.56}
+{'loss': 0.2638, 'grad_norm': 9.85079574584961, 'learning_rate': 1.5177065767284992e-05, 'epoch': 4.64}
+{'loss': 0.3469, 'grad_norm': 8.277425765991211, 'learning_rate': 1.1804384485666105e-05, 'epoch': 4.72}
+{'loss': 0.2577, 'grad_norm': 2.4324655532836914, 'learning_rate': 8.431703204047219e-06, 'epoch': 4.8}
+{'loss': 0.2641, 'grad_norm': 5.566359996795654, 'learning_rate': 5.059021922428331e-06, 'epoch': 4.88}
+{'loss': 0.1745, 'grad_norm': 2.373488426208496, 'learning_rate': 1.6863406408094434e-06, 'epoch': 4.96}
+{'train_runtime': 202.6366, 'train_samples_per_second': 12.337, 'train_steps_per_second': 3.084, 'train_loss': 0.35230062313079835, 'epoch': 5.0}
+  [grad_cb] QQP: flushed 31 entries  (31 total steps, every 20)  R:×32  W×32
+  [KL] Phase 2 complete: steps=625  mean_kl=0.0117  tail_kl=0.0038  stop_step=None  threshold=0.0355
+  [KL] Save-time KL_final on val (<=50 batches) = 0.3880  (diagnostic only — no blending)
+  [fisher] QQP: F(R)=2.008e-03  F(W)=0.000e+00  F(b)=0.000e+00
+  [memory] Task 'QQP' → G1 [OVERWRITE — KL-restrained trained W stored as new group state]  groupwise_ivs=32 (T1+T2+T3_f)  t3l_taskwise_ivs=0 (T3_l)  kl_final=0.3880  (now 7 tasks in G1: ['FOMC', 'NumGLUE-cm', 'NumGLUE-ds', 'dbpedia', 'amazon', 'agnews', 'QQP'])
+Directory '/projects/bfwa/mhossen1/CRAFT-CL/explore/Beta_dose_response/outputs/CRAFT_CL_betadose_0p05_llama32_1b_15task_2026-08-20_03-26-10/ckpt_14.QQP.20260820053933076446' already exists.
+  Checkpoint saved → /projects/bfwa/mhossen1/CRAFT-CL/explore/Beta_dose_response/outputs/CRAFT_CL_betadose_0p05_llama32_1b_15task_2026-08-20_03-26-10/ckpt_14.QQP.20260820053933076446
+
+  Backward evaluation after QQP:
+  Task               Score    Forgetting
+  ---------------  -------  ------------
+  [gpu_mem] before backward-eval: 3.32 GiB allocated
+  [build_reft] R restored on 32 layers.
+  C-STANCE score: 0.3500
+  C-STANCE          0.3500       +0.1000
+  [build_reft] R restored on 32 layers.
+  FOMC score: 0.1000
+  FOMC              0.1000       +0.4900
+  [build_reft] R restored on 32 layers.
+  MeetingBank ROUGE-L: 0.1537
+  MeetingBank       0.1537       +0.0000
+  [build_reft] R restored on 32 layers.
+  Py150 score: 0.3175
+  Py150             0.3175       +0.1105
+  [build_reft] R restored on 32 layers.
+  ScienceQA score: 0.5600
+  ScienceQA         0.5600       +0.0500
+  [build_reft] R restored on 32 layers.
+  NumGLUE-cm score: 0.0732
+  NumGLUE-cm        0.0732       +0.2195
+  [build_reft] R restored on 32 layers.
+  NumGLUE-ds score: 0.0600
+  NumGLUE-ds        0.0600       +0.3000
+  [build_reft] R restored on 32 layers.
+  20Minuten ROUGE-L (SARI fallback): 0.1504
+  20Minuten         0.1504       +0.0000
+  [build_reft] R restored on 32 layers.
+  dbpedia accuracy: 0.9200
+  dbpedia           0.9200       +0.0500
+  [build_reft] R restored on 32 layers.
+  amazon accuracy: 0.4800
+  amazon            0.4800       +0.1000
+  [build_reft] R restored on 32 layers.
+  yahoo accuracy: 0.2300
+  yahoo             0.2300       +0.4000
+  [build_reft] R restored on 32 layers.
+  agnews accuracy: 0.8800
+  agnews            0.8800       -0.0300
+  [build_reft] R restored on 32 layers.
+  yelp accuracy: 0.5800
+  yelp              0.5800       +0.0100
+  [build_reft] R restored on 32 layers.
+  BoolQA accuracy: 0.6800
+  BoolQA            0.6800       +0.0000
+  [build_reft] R restored on 32 layers.
+  QQP accuracy: 0.7400
+  QQP               0.7400    (just trained)
+  [gpu_mem] after backward-eval:  3.32 GiB allocated
+
+  Mean forgetting: +0.1286
+
+========================================================================
+  PERFORMANCE MATRIX
+========================================================================
+Trained→              C-STANCE        FOMC  MeetingBan       Py150   ScienceQA  NumGLUE-cm  NumGLUE-ds   20Minuten     dbpedia      amazon       yahoo      agnews        yelp      BoolQA         QQP
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+C-STANCE                0.4500         ---         ---         ---         ---         ---         ---         ---         ---         ---         ---         ---         ---         ---         ---
+FOMC                    0.4500      0.5900         ---         ---         ---         ---         ---         ---         ---         ---         ---         ---         ---         ---         ---
+MeetingBank             0.4500      0.5900      0.1537         ---         ---         ---         ---         ---         ---         ---         ---         ---         ---         ---         ---
+Py150                   0.4500      0.5900      0.1537      0.4280         ---         ---         ---         ---         ---         ---         ---         ---         ---         ---         ---
+ScienceQA               0.4500      0.5900      0.1537      0.3714      0.6100         ---         ---         ---         ---         ---         ---         ---         ---         ---         ---
+NumGLUE-cm              0.4500      0.5900      0.1537      0.3714      0.6100      0.2927         ---         ---         ---         ---         ---         ---         ---         ---         ---
+NumGLUE-ds              0.4500      0.4800      0.1537      0.3714      0.6100      0.1220      0.3600         ---         ---         ---         ---         ---         ---         ---         ---
+20Minuten               0.4500      0.4800      0.1537      0.3175      0.5600      0.1220      0.3600      0.1504         ---         ---         ---         ---         ---         ---         ---
+dbpedia                 0.4500      0.2800      0.1537      0.3175      0.5600      0.1463      0.3100      0.1504      0.9700         ---         ---         ---         ---         ---         ---
+amazon                  0.4500      0.0000      0.1537      0.3175      0.5600      0.1463      0.3300      0.1504      0.9300      0.5800         ---         ---         ---         ---         ---
+yahoo                   0.3300      0.0000      0.1537      0.3175      0.5600      0.1463      0.3300      0.1504      0.9300      0.5800      0.6300         ---         ---         ---         ---
+agnews                  0.3300      0.1200      0.1537      0.3175      0.5600      0.1220      0.2600      0.1504      0.9200      0.5300      0.6300      0.8500         ---         ---         ---
+yelp                    0.2300      0.1200      0.1537      0.3175      0.5600      0.1220      0.2600      0.1504      0.9200      0.5300      0.4200      0.8500      0.5900         ---         ---
+BoolQA                  0.3500      0.1200      0.1537      0.3175      0.5600      0.1220      0.2600      0.1504      0.9200      0.5300      0.2300      0.8500      0.5800      0.6800         ---
+QQP                     0.3500      0.1000      0.1537      0.3175      0.5600      0.0732      0.0600      0.1504      0.9200      0.4800      0.2300      0.8800      0.5800      0.6800      0.7400
+
+  Mean Forgetting                +0.1286
+  Overall Performance (OP)       0.4183
+  Backward Transfer (BWT)        +0.1200
+  Groups Created                 4
+========================================================================
+
+  Routing log:
+    C-STANCE         G0  NEW   [ref=cls]
+    FOMC             G1  NEW   [ref=cls]
+    MeetingBank      G2  NEW   [ref=summ]
+    Py150            G3  NEW   [ref=code]
+    ScienceQA        G3  JOIN  [ref=cls]
+    NumGLUE-cm       G1  JOIN  [ref=reasoning]
+    NumGLUE-ds       G1  JOIN  [ref=reasoning]
+    20Minuten        G3  JOIN  [ref=summ]
+    dbpedia          G1  JOIN  [ref=cls]
+    amazon           G1  JOIN  [ref=cls]
+    yahoo            G0  JOIN  [ref=cls]
+    agnews           G1  JOIN  [ref=cls]
+    yelp             G0  JOIN  [ref=cls]
+    BoolQA           G0  JOIN  [ref=cls]
+    QQP              G1  JOIN  [ref=cls]
+
+  Group contents:
+    G0: ['C-STANCE', 'yahoo', 'yelp', 'BoolQA']  (n_merged=4)
+    G1: ['FOMC', 'NumGLUE-cm', 'NumGLUE-ds', 'dbpedia', 'amazon', 'agnews', 'QQP']  (n_merged=7)
+    G2: ['MeetingBank']  (n_merged=1)
+    G3: ['Py150', 'ScienceQA', '20Minuten']  (n_merged=3)
+
+ Log Results saved → /projects/bfwa/mhossen1/CRAFT-CL/explore/Beta_dose_response/outputs/CRAFT_CL_betadose_0p05_llama32_1b_15task_2026-08-20_03-26-10/cl_results.json
+========================================================================
+  CRAFT-CL post-hoc analysis  (E4 + E7)
+========================================================================
+
+  Tasks:              15
+  Groups created:     4
+
+─── E4: KL drift vs backward-transfer ─────────────────────────
+  Pairs plotted:           99
+  Pairs excluded (no KL):  6
+    within-group:          30
+    between-group:         69
+  Pearson r:               +0.1633   (t=+1.630, df=97)
+  Interpretation:          near zero — KL drift does NOT predict forgetting
+  Plot:  /projects/bfwa/mhossen1/CRAFT-CL/explore/Beta_dose_response/outputs/CRAFT_CL_betadose_0p05_llama32_1b_15task_2026-08-20_03-26-10/e4_kl_vs_bwt.png
+  CSV:   /projects/bfwa/mhossen1/CRAFT-CL/explore/Beta_dose_response/outputs/CRAFT_CL_betadose_0p05_llama32_1b_15task_2026-08-20_03-26-10/e4_kl_vs_bwt.csv
+
+─── E7: BWT decomposition (within-group vs between-group) ────
+  between-group  (n= 75): mean BWT = -0.0618  ± 0.1126    (median=+0.0000, range=[-0.5900, +0.0000])
+  within-group   (n= 30): mean BWT = -0.1614  ± 0.1532    (median=-0.1102, range=[-0.5900, +0.0300])
+
+  Interpretation:
+    between-group BWT should be ≈ 0 (groups don't share W).
+    A non-zero between-group mean indicates either eval
+    nondeterminism or a contamination bug in intervention
+    state loading at evaluation time.
+    within-group BWT measures overwrite-induced interference,
+    i.e. forgetting introduced when a later in-group task
+    overwrites the shared cluster state that earlier
+    in-group tasks contributed to.  This is the controlled
+    drift bounded by the KL-anchored fine-tuning step.
+  JSON:  /projects/bfwa/mhossen1/CRAFT-CL/explore/Beta_dose_response/outputs/CRAFT_CL_betadose_0p05_llama32_1b_15task_2026-08-20_03-26-10/e7_bwt_decomposition.json
+  Plot:  /projects/bfwa/mhossen1/CRAFT-CL/explore/Beta_dose_response/outputs/CRAFT_CL_betadose_0p05_llama32_1b_15task_2026-08-20_03-26-10/e7_bwt_decomposition.png
+
+
+  [post-analysis] Building pairwise trained-weight distance matrix ...
+  [post-analysis] Saved pairwise matrix → /projects/bfwa/mhossen1/CRAFT-CL/explore/Beta_dose_response/outputs/CRAFT_CL_betadose_0p05_llama32_1b_15task_2026-08-20_03-26-10/post_cl_analysis.json
+  [post-analysis] Trained-weight ARI vs 4-type labels: 0.14245014245014245
+  [post-analysis] Routing ARI (assigned groups vs types):  0.14245014245014245
+  [logger] param_drift_log.json written  (15 entries)
+  [logger] grad_trajectory_log.json written  (351 entries)
+  [logger] causal_router_log.json written  (0 entries)
+  [logger] fisher_log.json written  (15 entries)
+  [logger] memory_merge_log.json written  (0 entries)
+  [logger] tier_event_log.json written  (0 entries)
+
+════════════════════════════════════════════════════════════════════
+  Finished at Thu Aug 20 05:47:08 CDT 2026 with exit code 0
+  Results: /projects/bfwa/mhossen1/CRAFT-CL/explore/Beta_dose_response/outputs/CRAFT_CL_betadose_0p05_llama32_1b_15task_2026-08-20_03-26-10/cl_results.json
+════════════════════════════════════════════════════════════════════

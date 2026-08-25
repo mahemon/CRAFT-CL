@@ -1,0 +1,33 @@
+========================================================================
+  CRAFT-CL post-hoc analysis  (E4 + E7)
+========================================================================
+
+  Tasks:              8
+  Groups created:     5
+
+─── E4: KL drift vs backward-transfer ─────────────────────────
+  Pairs plotted:           11
+  Pairs excluded (no KL):  17
+    within-group:          4
+    between-group:         7
+  Pearson r:               -0.0639   (t=-0.192, df=9)
+  Interpretation:          near zero — KL drift does NOT predict forgetting
+  Plot:  /projects/bfwa/mhossen1/CRAFT-CL/explore/Routing/outputs/CRAFT_CL_KLroute_R3_evict_beta0p3_gemma2b_prototype_2026-08-19_18-34-57/e4_kl_vs_bwt.png
+  CSV:   /projects/bfwa/mhossen1/CRAFT-CL/explore/Routing/outputs/CRAFT_CL_KLroute_R3_evict_beta0p3_gemma2b_prototype_2026-08-19_18-34-57/e4_kl_vs_bwt.csv
+
+─── E7: BWT decomposition (within-group vs between-group) ────
+  between-group  (n= 24): mean BWT = -0.0776  ± 0.0871    (median=-0.0606, range=[-0.2762, +0.0000])
+  within-group   (n=  4): mean BWT = -0.1939  ± 0.0611    (median=-0.1901, range=[-0.2762, -0.1192])
+
+  Interpretation:
+    between-group BWT should be ≈ 0 (groups don't share W).
+    A non-zero between-group mean indicates either eval
+    nondeterminism or a contamination bug in intervention
+    state loading at evaluation time.
+    within-group BWT measures overwrite-induced interference,
+    i.e. forgetting introduced when a later in-group task
+    overwrites the shared cluster state that earlier
+    in-group tasks contributed to.  This is the controlled
+    drift bounded by the KL-anchored fine-tuning step.
+  JSON:  /projects/bfwa/mhossen1/CRAFT-CL/explore/Routing/outputs/CRAFT_CL_KLroute_R3_evict_beta0p3_gemma2b_prototype_2026-08-19_18-34-57/e7_bwt_decomposition.json
+  Plot:  /projects/bfwa/mhossen1/CRAFT-CL/explore/Routing/outputs/CRAFT_CL_KLroute_R3_evict_beta0p3_gemma2b_prototype_2026-08-19_18-34-57/e7_bwt_decomposition.png

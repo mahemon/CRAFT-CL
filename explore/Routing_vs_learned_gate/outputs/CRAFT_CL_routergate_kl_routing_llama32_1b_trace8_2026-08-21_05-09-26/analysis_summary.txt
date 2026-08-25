@@ -1,0 +1,33 @@
+========================================================================
+  CRAFT-CL post-hoc analysis  (E4 + E7)
+========================================================================
+
+  Tasks:              8
+  Groups created:     3
+
+─── E4: KL drift vs backward-transfer ─────────────────────────
+  Pairs plotted:           24
+  Pairs excluded (no KL):  4
+    within-group:          7
+    between-group:         17
+  Pearson r:               +0.0761   (t=+0.358, df=22)
+  Interpretation:          near zero — KL drift does NOT predict forgetting
+  Plot:  /projects/bfwa/mhossen1/CRAFT-CL/explore/Routing_vs_learned_gate/outputs/CRAFT_CL_routergate_kl_routing_llama32_1b_trace8_2026-08-21_05-09-26/e4_kl_vs_bwt.png
+  CSV:   /projects/bfwa/mhossen1/CRAFT-CL/explore/Routing_vs_learned_gate/outputs/CRAFT_CL_routergate_kl_routing_llama32_1b_trace8_2026-08-21_05-09-26/e4_kl_vs_bwt.csv
+
+─── E7: BWT decomposition (within-group vs between-group) ────
+  between-group  (n= 21): mean BWT = -0.0289  ± 0.0454    (median=+0.0000, range=[-0.1512, +0.0031])
+  within-group   (n=  7): mean BWT = -0.0625  ± 0.0541    (median=-0.0680, range=[-0.1512, +0.0031])
+
+  Interpretation:
+    between-group BWT should be ≈ 0 (groups don't share W).
+    A non-zero between-group mean indicates either eval
+    nondeterminism or a contamination bug in intervention
+    state loading at evaluation time.
+    within-group BWT measures overwrite-induced interference,
+    i.e. forgetting introduced when a later in-group task
+    overwrites the shared cluster state that earlier
+    in-group tasks contributed to.  This is the controlled
+    drift bounded by the KL-anchored fine-tuning step.
+  JSON:  /projects/bfwa/mhossen1/CRAFT-CL/explore/Routing_vs_learned_gate/outputs/CRAFT_CL_routergate_kl_routing_llama32_1b_trace8_2026-08-21_05-09-26/e7_bwt_decomposition.json
+  Plot:  /projects/bfwa/mhossen1/CRAFT-CL/explore/Routing_vs_learned_gate/outputs/CRAFT_CL_routergate_kl_routing_llama32_1b_trace8_2026-08-21_05-09-26/e7_bwt_decomposition.png

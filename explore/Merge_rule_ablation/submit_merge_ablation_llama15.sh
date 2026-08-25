@@ -14,7 +14,7 @@
 #
 # Submit from a Delta login node:
 #   export HF_TOKEN=hf_...
-#   bash Merge_rule_ablation/submit_merge_ablation_llama15.sh
+#   bash explore/Merge_rule_ablation/submit_merge_ablation_llama15.sh
 # ============================================================================
 
 ROOT_DIR="/projects/bfwa/mhossen1/CRAFT-CL"
@@ -65,7 +65,7 @@ submit_job() {
 
     sbatch <<EOF
 #!/bin/bash
-#SBATCH --account=bfwa-delta-gpu
+#SBATCH --account=bdpm-delta-gpu
 #SBATCH --partition=gpuA100x4
 #SBATCH --time=24:00:00
 #SBATCH --nodes=1
@@ -181,7 +181,8 @@ python -u ${TRAIN_SCRIPT} \\
   --merge_fisher_batches ${MERGE_FISHER_BATCHES} \\
   \\
   --inference_router oracle \\
-  --router_probe_size 16
+  --router_probe_size 16 \\
+  --deterministic
 
 EXIT_CODE=\$?
 echo ""
