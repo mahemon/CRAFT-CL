@@ -3,7 +3,7 @@ import torch
 from torch.utils.data import DataLoader
 from transformers import DataCollatorForSeq2Seq, AutoTokenizer
 from typing import Optional
-from task_config import task_config
+from utils.task_config import task_config
 from tqdm import tqdm
 import re
 import difflib
@@ -55,14 +55,14 @@ STRING_LABEL_TASKS = {
 }
 
 TRACE_MAX_NEW_TOKENS = {
-    "C-STANCE":    10,
-    "FOMC":        10,
-    "ScienceQA":   10,
-    "NumGLUE-cm": 128,
-    "NumGLUE-ds": 128,
-    "MeetingBank": 512,
-    "20Minuten":   384,
-    "Py150":       128,
+    "C-STANCE":    20,
+    "FOMC":        20,
+    "ScienceQA":   20,
+    "NumGLUE-cm": 512,
+    "NumGLUE-ds": 512,
+    "MeetingBank": 1024,
+    "20Minuten":   1024,
+    "Py150":       512,
     "Lima":        256,
     "ag_news":    20,
     "agnews":     20,
@@ -70,17 +70,131 @@ TRACE_MAX_NEW_TOKENS = {
     "yelp":       20,
     "dbpedia":    20,
     "yahoo":      20,
-    "BoolQA":     10,
-    "CB":         10,
+    "BoolQA":     20,
+    "CB":         20,
     "COPA":       20,
-    "IMDB":       10,
-    "MNLI":       10,
-    "MultiRC":    10,
-    "QQP":        10,
-    "RTE":        10,
-    "SST-2":      10,
-    "WiC":        10,
+    "IMDB":       20,
+    "MNLI":       20,
+    "MultiRC":    20,
+    "QQP":        20,
+    "RTE":        20,
+    "SST-2":      20,
+    "WiC":        20,
 }
+
+# ──────────────────────────────────────────────────────────────────────────
+# Summarisation / simplification evaluation
+# ──────────────────────────────────────────────────────────────────────────
+import os
+from collections import Counter
+
+# Decoding profile for MeetingBank and 20Minuten. Legacy behaviour (greedy,
+# single beam, no length floor, no repetition control) is kept under
+# SUMM_DECODING=legacy so old numbers can be reproduced exactly.
+#   SUMM_DECODING      legacy | tuned   (default tuned)
+#   SUMM_NUM_BEAMS     beams for summarisation (default 1; 4 is ~4x slower)
+#   SUMM_MIN_NEW       min_new_tokens   (default 8)
+#   SUMM_NO_REPEAT     no_repeat_ngram_size (default 3; 0 disables)
+SUMM_TASKS = TRACE_ROUGE | TRACE_SARI
+
+
+def summarisation_decoding_args() -> dict:
+    if os.environ.get("SUMM_DECODING", "tuned").lower() == "legacy":
+        return {}
+    out = {"do_sample": False}
+    nb = int(os.environ.get("SUMM_NUM_BEAMS", "1"))
+    if nb > 1:
+        out["num_beams"] = nb
+    mn = int(os.environ.get("SUMM_MIN_NEW", "8"))
+    if mn > 0:
+        out["min_new_tokens"] = mn
+    nr = int(os.environ.get("SUMM_NO_REPEAT", "3"))
+    if nr > 0:
+        out["no_repeat_ngram_size"] = nr
+    return out
+
+
+_SARI_PUNCT = re.compile(r"([^\w\s])")
+
+
+def _sari_tokens(text: str) -> list:
+    """Lower-case, split punctuation from words, whitespace-tokenise.
+    Lightweight stand-in for the sacremoses tokeniser used by the evaluate
+    hub metric; the SARI algorithm below is otherwise identical."""
+    text = _SARI_PUNCT.sub(r" \1 ", text.lower())
+    return text.split()
+
+
+def _ngrams(tokens: list, n: int) -> list:
+    return [" ".join(tokens[i:i + n]) for i in range(len(tokens) - n + 1)]
+
+
+def _sari_ngram(sgrams, cgrams, rgramslist, numref):
+    """Keep / delete / add F-scores for one n-gram order (Xu et al. 2016,
+    as implemented in EASSE and the evaluate hub 'sari' metric)."""
+    rgramcounter = Counter(g for rgrams in rgramslist for g in rgrams)
+    sgramcounter_rep = Counter({k: v * numref for k, v in Counter(sgrams).items()})
+    cgramcounter_rep = Counter({k: v * numref for k, v in Counter(cgrams).items()})
+
+    # keep
+    keep_rep = sgramcounter_rep & cgramcounter_rep
+    keep_good = keep_rep & rgramcounter
+    keep_all = sgramcounter_rep & rgramcounter
+    p = sum(keep_good[k] / keep_rep[k] for k in keep_good)
+    # recall uses count-weighted totals: the EASSE / evaluate-hub correction
+    # to the original SARI.py ("fix an alleged bug in the keep score")
+    r = sum(keep_good.values())
+    keep_p = p / len(keep_rep) if keep_rep else 1.0
+    keep_r = r / sum(keep_all.values()) if keep_all else 1.0
+    keep = (2 * keep_p * keep_r / (keep_p + keep_r)) if (keep_p + keep_r) > 0 else 0.0
+
+    # delete (precision only, per the reference implementation)
+    del_rep = sgramcounter_rep - cgramcounter_rep
+    del_good = del_rep - rgramcounter
+    p = sum(del_good[k] / del_rep[k] for k in del_good)
+    delete = p / len(del_rep) if del_rep else 1.0
+
+    # add
+    add_c = set(cgramcounter_rep) - set(sgramcounter_rep)
+    add_good = add_c & set(rgramcounter)
+    add_all = set(rgramcounter) - set(sgramcounter_rep)
+    add_p = len(add_good) / len(add_c) if add_c else 1.0
+    add_r = len(add_good) / len(add_all) if add_all else 1.0
+    add = (2 * add_p * add_r / (add_p + add_r)) if (add_p + add_r) > 0 else 0.0
+    return keep, delete, add
+
+
+def sari_sentence(source: str, prediction: str, references: list) -> float:
+    """SARI in [0, 100] for one example; references is a list of strings."""
+    s = _sari_tokens(source)
+    c = _sari_tokens(prediction)
+    rs = [_sari_tokens(r) for r in references]
+    keep = delete = add = 0.0
+    for n in (1, 2, 3, 4):
+        k, d, a = _sari_ngram(_ngrams(s, n), _ngrams(c, n),
+                              [_ngrams(r, n) for r in rs], len(rs))
+        keep += k; delete += d; add += a
+    return 100.0 * (keep / 4 + delete / 4 + add / 4) / 3
+
+
+def sari_corpus(sources, predictions, references) -> float:
+    """Mean sentence SARI in [0, 100]. references: list of list of str."""
+    assert len(sources) == len(predictions) == len(references)
+    return float(np.mean([sari_sentence(s, p, r)
+                          for s, p, r in zip(sources, predictions, references)]))
+
+
+def sari_source_text(example: dict) -> str:
+    """The complex/original sentence SARI compares against. Prefers an
+    explicit field; falls back to the full prompt (which then includes the
+    instruction text and inflates the delete score -- if that fallback is
+    hit, add the correct field name here)."""
+    for k in ("source", "text", "input", "complex", "original"):
+        v = example.get(k)
+        if isinstance(v, str) and v.strip():
+            return v
+    return example.get("prompt", "")
+
 
 def is_float(value) -> bool:
     if value is None:
@@ -223,6 +337,20 @@ def compute_metrics(
         terminators = tokenizer.eos_token_id
 
     max_new_tokens = TRACE_MAX_NEW_TOKENS.get(dataset_name, 128)
+
+    is_summ = dataset_name in SUMM_TASKS
+    summ_args = summarisation_decoding_args() if is_summ else {}
+    if is_summ and not is_glue:
+        # beams must be fixed before intervention_locations are expanded
+        num_beams = int(summ_args.get("num_beams", 1))
+        print(f"  [{dataset_name}] summarisation decoding: "
+              f"{summ_args or 'legacy'}  max_new_tokens={max_new_tokens}")
+    # length diagnostics (summarisation only): are prompts hitting the cap,
+    # and is the model actually producing summaries?
+    _cap = int(getattr(tokenizer, "model_max_length", 0) or 0)
+    _n_at_cap = 0
+    _gen_lens: list = []
+
     eval_iterator  = tqdm(eval_dataloader, desc=f"eval [{dataset_name}]",
                           position=0, leave=True)
 
@@ -300,11 +428,33 @@ def compute_metrics(
                 generation_args["top_p"] = top_p
             if top_k is not None:
                 generation_args["top_k"] = top_k
+            if is_summ and summ_args:
+                # deterministic profile overrides any sampling flags above
+                for k in ("temperature", "top_p", "top_k"):
+                    generation_args.pop(k, None)
+                generation_args.update(summ_args)
+
+            if greedy_decoding:
+                # --greedy_decoding: always decode greedily. The TRACE and task-order datasets have
+                # no "generation_args" in task_config, so without this the flag changed nothing
+                # and generate() fell back to the model's own defaults (Llama-2/3, DeepSeek:
+                # sampling at temperature 0.6).
+                generation_args["do_sample"] = False
+                for k in ("temperature", "top_p", "top_k"):
+                    generation_args.pop(k, None)
 
             _, steered_response = intervenable.generate(**generation_args)
 
             generated_only = steered_response[:, n_input_tokens:]
             actual_preds   = tokenizer.batch_decode(generated_only, skip_special_tokens=True)
+
+            if is_summ:
+                if _cap:
+                    _n_at_cap += int((inputs["attention_mask"].sum(dim=1) >= _cap - 1).sum())
+                pad_id = tokenizer.pad_token_id
+                for row in generated_only:
+                    n_tok = int((row != pad_id).sum()) if pad_id is not None else int(row.numel())
+                    _gen_lens.append(n_tok)
 
             for sample_id, pred in zip(inputs["id"].tolist(), actual_preds):
                 example = data_items[sample_id]
@@ -379,7 +529,7 @@ def compute_metrics(
                         generation = raw_generation
                         all_generated.append(generation)
                         all_references.append(answer)
-                        all_sources.append(example.get("prompt", ""))
+                        all_sources.append(sari_source_text(example))
 
                     elif dataset_name in TRACE_CODE:
                         gen  = raw_generation.strip()
@@ -441,6 +591,14 @@ def compute_metrics(
 
     if task in TRACE_TASKS:
 
+        if dataset_name in SUMM_TASKS and all_generated:
+            n_empty = sum(1 for g in all_generated if not g.strip())
+            print(f"  [{dataset_name}] prompts at length cap: {_n_at_cap}/{len(all_generated)}"
+                  f"   empty outputs: {n_empty}/{len(all_generated)}"
+                  f"   mean gen tokens: "
+                  f"{(sum(_gen_lens) / len(_gen_lens)) if _gen_lens else 0:.1f}"
+                  f" (max_new_tokens={max_new_tokens})")
+
         if dataset_name in TRACE_ROUGE and all_generated:
             rouge = hf_evaluate.load("rouge", experiment_id=f"{dataset_name}_{id(all_generated)}")
             result = rouge.compute(
@@ -452,27 +610,33 @@ def compute_metrics(
             print(f"  {dataset_name} ROUGE-L: {score:.4f}")
 
         elif dataset_name in TRACE_SARI and all_generated:
+            # SARI, never ROUGE. Hub metric first (needs the cached script and
+            # sacremoses; warm it once from a login node with
+            #   python -c "import evaluate; evaluate.load('sari')"
+            # under the job's HF_HOME); otherwise the local EASSE-algorithm
+            # implementation below. The log states which one scored the run.
+            if not any(s_.strip() for s_ in all_sources):
+                raise RuntimeError(
+                    f"SARI for {dataset_name}: no source text on the eval items "
+                    f"(looked for source/text/input/complex/original/prompt).")
+            refs = [[r] for r in all_references]
             try:
-                sari_metric = hf_evaluate.load("sari", experiment_id=f"{dataset_name}_{id(all_generated)}")
-                result = sari_metric.compute(
-                    sources=all_sources,
-                    predictions=all_generated,
-                    references=[[r] for r in all_references],
-                )
-                score = round(float(result["sari"]) / 100.0, 4)
-                print(f"  {dataset_name} SARI: {score:.4f}")
+                sari_metric = hf_evaluate.load(
+                    "sari", experiment_id=f"{dataset_name}_{id(all_generated)}")
+                raw = float(sari_metric.compute(
+                    sources=all_sources, predictions=all_generated,
+                    references=refs)["sari"])
+                impl = "evaluate-hub"
             except Exception as err:
-                logger.warning(
-                    f"SARI metric failed ({err}); falling back to ROUGE-L for {dataset_name}."
-                )
-                rouge = hf_evaluate.load("rouge", experiment_id=f"{dataset_name}_{id(all_generated)}")
-                result = rouge.compute(
-                    predictions=all_generated,
-                    references=all_references,
-                    use_stemmer=False,
-                )
-                score = round(float(result["rougeL"]), 4)
-                print(f"  {dataset_name} ROUGE-L (SARI fallback): {score:.4f}")
+                logger.warning(f"hub SARI unavailable ({err}); using local "
+                               f"implementation.")
+                raw = sari_corpus(all_sources, all_generated, refs)
+                impl = "local"
+            score = round(raw / 100.0, 4)
+            src_field = ("prompt" if all_sources[0] == data_items[0].get("prompt")
+                         else "explicit")
+            print(f"  {dataset_name} SARI: {score:.4f}   "
+                  f"(impl={impl}, source field={src_field})")
 
         elif total_count > 0:
             score = round(correct_count / total_count, 4)

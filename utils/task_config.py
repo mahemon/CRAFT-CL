@@ -1,4 +1,4 @@
-from templates import *
+from utils.templates import *
 
 task_config = {
  

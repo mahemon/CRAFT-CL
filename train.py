@@ -1,5 +1,20 @@
-from html import parser
+# Use Tuned_router/utils, not CRAFT-CL/utils. Neither folder has an
+# __init__.py, so "utils" is a namespace package spanning both; putting this
+# folder first makes every utils.* module resolve here, and the check below
+# stops the run if any of them was picked up from somewhere else.
+import sys
 import os
+
+_STUDY_DIR = os.path.dirname(os.path.abspath(__file__))
+if sys.path[0] != _STUDY_DIR:
+    sys.path.insert(0, _STUDY_DIR)
+
+from utils.task_config import task_config
+from utils.dataset import LoReftGLUEDataset, LoReftTRACEDataset
+from utils.compute_metrics import compute_metrics
+
+from html import parser
+
 import copy
 import gc
 import json
@@ -17,9 +32,16 @@ from transformers import (
 )
 from huggingface_hub import login
 
-from utils.task_config import task_config
-from utils.dataset import LoReftGLUEDataset, LoReftTRACEDataset
-from utils.compute_metrics import compute_metrics
+# from utils.task_config import task_config
+# from utils.dataset import LoReftGLUEDataset, LoReftTRACEDataset
+# from utils.compute_metrics import compute_metrics
+
+# from utils.CL_topology import (
+#     capture_before_flat, compute_param_delta,
+#     compute_fisher, GradientTrajectoryCallback, flush_log,
+#     log_delta_assignment, log_prototype_state, log_prototype_merge,
+#     log_memory_merge, log_task_private_save, reset_logs,
+# )
 
 from utils.CL_topology import (
     capture_before_flat, compute_param_delta,
@@ -28,6 +50,14 @@ from utils.CL_topology import (
     log_memory_merge, log_task_private_save, reset_logs,
 )
 
+_LOCAL_UTILS = os.path.join(_STUDY_DIR, "utils") + os.sep
+for _m in ("utils.task_config", "utils.dataset",
+           "utils.compute_metrics", "utils.CL_topology"):
+    _f = os.path.abspath(sys.modules[_m].__file__)
+    if not _f.startswith(_LOCAL_UTILS):
+        raise SystemExit(f"FATAL: {_m} loaded from {_f}, expected {_LOCAL_UTILS}")
+print(f"  [utils] task_config, dataset, compute_metrics, CL_topology <- {_LOCAL_UTILS}")
+
 from pyreft import (
     get_reft_model, ReftConfig, ReftTrainerForCausalLM,
     NoreftIntervention, LoreftIntervention, ConsreftIntervention,
@@ -35,9 +65,41 @@ from pyreft import (
     ReftDataCollator,
 )
 
-from agnostic_router import (
-    route_and_load, attach_group_prototype, dump_report as agn_dump_report,
+from utils.router_head import RouterHead, features_from_dataset, _unique_layers
+from utils.agnostic_router import (
+    route_and_load as _agn_route_and_load, dump_report as agn_dump_report,
 )
+from utils.litar_router import LitarRouter, litar_route_and_load
+
+for _m in ("utils.router_head", "utils.agnostic_router", "utils.litar_router"):
+    _f = os.path.abspath(sys.modules[_m].__file__)
+    if not _f.startswith(_LOCAL_UTILS):
+        raise SystemExit(f"FATAL: {_m} loaded from {_f}, expected {_LOCAL_UTILS}")
+
+
+def route_and_load(eval_reft, eval_task, memory, base_model, tokenizer, args,
+                   dataset, build_reft_fn=None, teardown_fn=None):
+    """--inference_router litar goes to utils/litar_router.py; oracle and
+    learned_head go to utils/agnostic_router.py."""
+    _route = (litar_route_and_load if args.inference_router == "litar"
+              else _agn_route_and_load)
+    return _route(eval_reft, eval_task, memory, base_model, tokenizer, args,
+                  dataset, build_reft_fn=build_reft_fn, teardown_fn=teardown_fn)
+
+
+# Group-state merge rules. Optional: only --merge_rule != "overwrite" needs it,
+# and main() fails fast with a clear message if it is missing in that case.
+try:
+    from utils.merge_rules import (
+        MERGE_RULES, merge_group_state, compute_iv_fisher, accumulate_fisher,
+        kl_scale_from_halflife,
+    )
+    _HAS_MERGE_RULES = True
+except ImportError as _merge_import_err:
+    MERGE_RULES = ("overwrite", "ema", "fisher", "prototype", "kl")
+    merge_group_state = compute_iv_fisher = accumulate_fisher = None
+    kl_scale_from_halflife = None
+    _HAS_MERGE_RULES = False
 
 try:
     import peft
@@ -111,15 +173,43 @@ TRACE_ALPACA_HEADER = (
     "### Instruction:\n"
 )
 
+# Mistral-7B-Instruct-v0.3's own template puts the system prompt only into
+# the LAST user turn, so utils/dataset.py's prompt-only and prompt+answer
+# sequences diverge after "[INST]" and the prompt is left in the loss. This
+# template puts it into the FIRST user turn instead, so the prompt is an exact
+# prefix of the full sequence. Output is otherwise identical to Mistral's.
+MISTRAL_CHAT_TEMPLATE = (
+    "{%- if messages[0]['role'] == 'system' %}"
+    "{%- set system_message = messages[0]['content'] %}"
+    "{%- set loop_messages = messages[1:] %}"
+    "{%- else %}{%- set loop_messages = messages %}{%- endif %}"
+    "{{- bos_token }}"
+    "{%- for message in loop_messages %}"
+    "{%- if message['role'] == 'user' %}"
+    "{%- if loop.first and system_message is defined %}"
+    "{{- '[INST] ' + system_message + '\\n\\n' + message['content'] + '[/INST]' }}"
+    "{%- else %}{{- '[INST] ' + message['content'] + '[/INST]' }}{%- endif %}"
+    "{%- elif message['role'] == 'assistant' %}"
+    "{{- ' ' + message['content'] + eos_token }}"
+    "{%- endif %}"
+    "{%- endfor %}"
+)
+
 def _find_question_start(tokenizer) -> int:
     header_ids = tokenizer(
         TRACE_ALPACA_HEADER,
         add_special_tokens=False,
         return_tensors="pt",
     )["input_ids"][0]
-    question_start = len(header_ids) + 1 
+    # Special tokens the tokenizer prepends (BOS). 1 for Llama / Gemma /
+    # Mistral / DeepSeek-R1-Distill-Llama (unchanged from the old "+ 1");
+    # 0 for Qwen2.5, which adds no BOS.
+    _n_special = (len(tokenizer("x")["input_ids"])
+                  - len(tokenizer("x", add_special_tokens=False)["input_ids"]))
+    question_start = len(header_ids) + _n_special
     print(f"  [question_start] header={len(header_ids)} tokens  "
-            f"→ f-stream starts at position {question_start}")
+          f"special_prefix={_n_special}  "
+          f"→ f-stream starts at position {question_start}")
     return question_start
 
 def _stratify_layers(
@@ -189,6 +279,186 @@ def _teardown_reft_model(reft_model) -> None:
             except Exception:
                 continue
 
+def _gpu_mem(tag: str) -> None:
+    """Print allocated GPU memory and the peak since the current task started."""
+    if torch.cuda.is_available():
+        print(f"  [gpu_mem] {tag}: "
+              f"{torch.cuda.memory_allocated() / 2**30:.2f} GiB allocated, "
+              f"peak {torch.cuda.max_memory_allocated() / 2**30:.2f} GiB since task start")
+
+
+def _print_cuda_census(top: int = 15) -> None:
+    """On OOM: list the largest live CUDA tensors, so the log shows what holds memory."""
+    if not torch.cuda.is_available():
+        return
+    try:
+        print(f"\n  [oom-census] allocated={torch.cuda.memory_allocated() / 2**30:.2f} GiB  "
+              f"reserved={torch.cuda.memory_reserved() / 2**30:.2f} GiB")
+        agg = {}
+        for obj in gc.get_objects():
+            try:
+                if not (torch.is_tensor(obj) and obj.is_cuda):
+                    continue
+                key = (tuple(obj.shape), str(obj.dtype))
+                n, b = agg.get(key, (0, 0))
+                agg[key] = (n + 1, b + obj.element_size() * obj.nelement())
+            except Exception:
+                continue
+        for (shape, dt), (n, b) in sorted(agg.items(), key=lambda kv: -kv[1][1])[:top]:
+            print(f"  [oom-census] {b / 2**30:8.2f} GiB  x{n:<4d} {dt:<15} {list(shape)}")
+    except Exception as e:
+        print(f"  [oom-census] failed: {type(e).__name__}: {e}")
+
+
+RESUME_STATE_FILE = "resume_state.pt"
+
+
+def _save_resume_state(output_dir: str, task_idx: int, cl_order, perf_matrix,
+                       kl_per_task_log, task_to_group_log, routing_log,
+                       memory, router_head) -> None:
+    """Everything the task loop carries from one task to the next, written after
+    each task so a crashed run can continue with --resume_from. Never fatal."""
+    import random
+    path = os.path.join(output_dir, RESUME_STATE_FILE)
+    tmp = path + ".tmp"
+    try:
+        state = {
+            "version": 1,
+            "completed_task_idx": int(task_idx),
+            "cl_order": list(cl_order),
+            "perf_matrix": perf_matrix,
+            "kl_per_task_log": kl_per_task_log,
+            "task_to_group_log": task_to_group_log,
+            "routing_log": routing_log,
+            "memory": memory,
+            "router_head": router_head,
+            "rng": {
+                "torch": torch.get_rng_state(),
+                "cuda": (torch.cuda.get_rng_state_all()
+                         if torch.cuda.is_available() else None),
+                "numpy": np.random.get_state(),
+                "python": random.getstate(),
+            },
+        }
+        torch.save(state, tmp)
+        os.replace(tmp, path)
+        print(f"  [resume] state after task {task_idx + 1} saved → {path}")
+    except Exception as e:
+        print(f"  [resume] WARNING: could not save resume state "
+              f"({type(e).__name__}: {e}); training continues.")
+        try:
+            os.remove(tmp)
+        except OSError:
+            pass
+
+
+def _load_resume_state(path: str, cl_order) -> dict:
+    if os.path.isdir(path):
+        path = os.path.join(path, RESUME_STATE_FILE)
+    if not os.path.isfile(path):
+        raise FileNotFoundError(f"--resume_from: no {RESUME_STATE_FILE} at {path}")
+    try:
+        state = torch.load(path, map_location=None, weights_only=False)
+    except TypeError:            # torch without the weights_only argument
+        state = torch.load(path, map_location=None)
+    if list(state["cl_order"]) != list(cl_order):
+        raise ValueError(f"--resume_from: task order differs "
+                         f"(saved {state['cl_order']}, now {list(cl_order)})")
+    return state
+
+
+EVAL_SNAPSHOT_DIR = "eval_snapshots"
+TRAIN_ARGS_FILE = "train_args.json"
+TRAIN_SUMMARY_FILE = "train_summary.json"
+
+
+def _eval_snapshot_path(output_dir: str, task_idx: int, task_name: str) -> str:
+    return os.path.join(output_dir, EVAL_SNAPSHOT_DIR, f"after_{task_idx:02d}_{task_name}.pt")
+
+
+def _save_eval_snapshot(output_dir: str, task_idx: int, cl_order, kl_per_task_log,
+                        task_to_group_log, routing_log, memory, router_head) -> None:
+    """State after task task_idx is committed: everything an evaluation of row
+    task_idx needs (--skip_eval / --save_eval_snapshots). One file per task, kept."""
+    path = _eval_snapshot_path(output_dir, task_idx, cl_order[task_idx])
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    tmp = path + ".tmp"
+    try:
+        torch.save({
+            "version": 1,
+            "task_idx": int(task_idx),
+            "task_name": cl_order[task_idx],
+            "cl_order": list(cl_order),
+            "kl_per_task_log": kl_per_task_log,
+            "task_to_group_log": task_to_group_log,
+            "routing_log": routing_log,
+            "memory": memory,
+            "router_head": router_head,
+        }, tmp)
+        os.replace(tmp, path)
+        print(f"  [snapshot] state after task {task_idx + 1} saved → {path}")
+    except Exception as e:
+        print(f"  [snapshot] WARNING: could not save the evaluation snapshot "
+              f"({type(e).__name__}: {e}); this task cannot be evaluated later.")
+        try:
+            os.remove(tmp)
+        except OSError:
+            pass
+
+
+def _load_eval_snapshot(train_dir: str, task_idx: int, cl_order) -> dict:
+    path = _eval_snapshot_path(train_dir, task_idx, cl_order[task_idx])
+    if not os.path.isfile(path):
+        raise FileNotFoundError(f"--eval_only: snapshot not found: {path}")
+    try:
+        snap = torch.load(path, map_location=None, weights_only=False)
+    except TypeError:
+        snap = torch.load(path, map_location=None)
+    if list(snap["cl_order"]) != list(cl_order):
+        raise ValueError(f"--eval_only: task order differs (snapshot {snap['cl_order']}, "
+                         f"now {list(cl_order)})")
+    return snap
+
+
+# Arguments an evaluation-only run may set itself; every other argument is
+# restored from the training run's train_args.json.
+EVAL_ONLY_KEYS = {"eval_only", "eval_from", "output_dir", "cl_eval_file", "per_task_bwd_eval",
+                  "inference_router", "extra_eval_routers", "eval_batch_size",
+                  "max_n_eval_example", "greedy_decoding", "temperature", "top_p", "top_k",
+                  "router_probe_size"}
+
+
+def _restore_train_args(args):
+    """--eval_only: take the training configuration from <eval_from>/train_args.json.
+    Evaluation settings (EVAL_ONLY_KEYS) keep the value given on this command line;
+    if one is not given, the training run's value is used."""
+    import sys
+    if not args.eval_from:
+        raise SystemExit("--eval_only needs --eval_from <training output dir>")
+    path = os.path.join(args.eval_from, TRAIN_ARGS_FILE)
+    if not os.path.isfile(path):
+        raise SystemExit(f"--eval_only: {path} not found (was the run trained with this train.py?)")
+    with open(path) as f:
+        saved = json.load(f)
+    given = {a[2:].split("=")[0].replace("-", "_") for a in sys.argv[1:] if a.startswith("--")}
+    given |= {g[3:] for g in given if g.startswith("no_")}        # --no_per_task_bwd_eval
+    for k, v in saved.items():
+        if k in EVAL_ONLY_KEYS and k in given:
+            continue
+        if k in ("skip_eval", "save_eval_snapshots", "resume_from", "eval_only", "eval_from"):
+            continue
+        setattr(args, k, v)
+    args.skip_eval = False
+    args.save_eval_snapshots = False
+    args.resume_from = None
+    if not args.output_dir or "output_dir" not in given:
+        args.output_dir = os.path.join(args.eval_from, "eval_" + (
+            "val" if str(args.cl_eval_file) == "eval.json" else "test")
+            + ("_bwd" if args.per_task_bwd_eval else ""))
+    print(f"  [eval-only] training configuration restored from {path}")
+    return args
+
+
 def _release_gpu() -> None:
     gc.collect()
     if torch.cuda.is_available():
@@ -197,6 +467,21 @@ def _release_gpu() -> None:
             torch.cuda.ipc_collect()
         except Exception:
             pass
+
+
+# --kl_pred_mask: logits[t] predict token t+1, so the KL keeps position t when
+# labels[t+1] is a target, the same positions the shifted CE loss uses. The
+# original mask (labels != -100) is one position late and never scores the
+# answer distribution of a one-token answer. Off = original behaviour.
+_KL_PRED_MASK = False
+
+
+def _kl_mask(labels, device):
+    if not _KL_PRED_MASK:
+        return (labels != -100).to(device)
+    m = torch.zeros_like(labels, dtype=torch.bool)
+    m[..., :-1] = labels[..., 1:] != -100
+    return m.to(device)
 
 
 def _split_iv_state_by_5tier(
@@ -337,6 +622,10 @@ class WeightDistanceMemory:
         flat_aggregator:       str  = "vote",  
         flat_vote_quantile:    float = 0.5,
         vote_max_dist:         float = 0.20,
+        group_capacity:        int   = 0,
+        merge_rule:            str   = "overwrite",
+        merge_ema_alpha:       float = 0.5,
+        merge_kl_scale:        float = 1.0,
     ):
         assert normalize in ("none", "minmax", "zscore"), f"bad normalize={normalize}"
         assert aggregate in ("mean_all", "tiered"), f"bad aggregate={aggregate}"
@@ -361,8 +650,27 @@ class WeightDistanceMemory:
 
         self.vote_max_dist      = float(vote_max_dist) if vote_max_dist is not None else 0.0
 
+        # Max tasks per group. <=0 means uncapped (original behaviour). A full
+        # group is excluded from routing candidates, so a task that would have
+        # joined it opens a fresh group instead.
+        self.group_capacity = int(group_capacity or 0)
 
-        self.groups: Dict[int, Dict] = {} 
+        assert str(merge_rule).lower() in MERGE_RULES, \
+            f"bad merge_rule={merge_rule}; expected one of {MERGE_RULES}"
+        self.merge_rule      = str(merge_rule).lower()
+        self.merge_ema_alpha = float(merge_ema_alpha)
+        self.merge_kl_scale  = float(merge_kl_scale)
+        # Running per-parameter Fisher per group, used as F_old by merge_rule=fisher.
+        self.group_fisher: Dict[int, Dict[str, Dict[str, torch.Tensor]]] = {}
+
+        # Frozen probe batches, one per member task, kept on CPU. These are
+        # what makes incumbent-side routing possible: the router can only ask
+        # "what does this arrival do to the group's own data" if the group's
+        # own data is still around. 16 examples per task.
+        self.group_probes: Dict[int, List[dict]] = {}
+        self.merge_log: List[dict] = []
+
+        self.groups: Dict[int, Dict] = {}
         self.t3l_tasks: Dict[str, Dict[str, dict]] = {} 
         self.task_to_group: Dict[str, int] = {}        
         self.group_name_to_gid: Dict[str, int] = {}      
@@ -430,6 +738,17 @@ class WeightDistanceMemory:
         self._routing_log.append(debug)
         return int(gid), is_new, debug
 
+    def group_is_full(self, gid: int) -> bool:
+        if self.group_capacity <= 0:
+            return False
+        g = self.groups.get(gid)
+        return g is not None and len(g.get("task_names", [])) >= self.group_capacity
+
+    def open_gids(self) -> List[int]:
+        """Groups still eligible to accept a task, in gid order."""
+        return [gid for gid in sorted(self.groups.keys())
+                if not self.group_is_full(gid)]
+
     def has_task(self, task_name: str) -> bool:
         """True if this task has already been trained and stored."""
         return task_name in self.task_to_group
@@ -468,13 +787,37 @@ class WeightDistanceMemory:
             self._routing_log.append(debug)
             return self._next_gid, True, debug
 
+        candidate_gids = self.open_gids()
+        if not candidate_gids:
+            print(f"  [capacity] every group is at capacity "
+                  f"({self.group_capacity} task(s)); '{task_name}' → NEW GROUP.")
+            debug = {
+                "task":              task_name,
+                "n_existing_groups": len(self.groups),
+                "group_capacity":    self.group_capacity,
+                "decision":          "new_group_capacity_full",
+                "assigned_gid":      self._next_gid,
+                "raw_distances":     {},
+                "normalized":        {},
+                "threshold":         self.assign_threshold,
+                "normalize_mode":    self.normalize,
+                "aggregate_mode":    self.aggregate,
+            }
+            self._routing_log.append(debug)
+            return self._next_gid, True, debug
+        if len(candidate_gids) < len(self.groups):
+            full = [g for g in sorted(self.groups) if g not in candidate_gids]
+            print(f"  [capacity] cap={self.group_capacity}; skipping full "
+                  f"group(s) {full}; candidates={candidate_gids}")
+
         raw_dists: Dict[int, float] = {}
         per_tier_dists: Dict[int, Dict[str, float]] = {}
         per_tier_n_all: Dict[int, Dict[str, Tuple[int, int]]] = {}
         per_tier_wn_all: Dict[int, Dict[str, Tuple[float, float]]] = {}
         per_tier_raw_all: Dict[int, Dict[str, float]] = {}
         per_iv_per_group_d: Dict[int, Dict[str, float]] = {}
-        for gid, g in self.groups.items():
+        for gid in candidate_gids:
+            g = self.groups[gid]
             dist, per_tier, per_tier_n, per_tier_wn, per_tier_raw = self._group_distance(
                 buckets_K, g["iv_state"], reft_model, task_layers)
             raw_dists[gid]        = dist
@@ -601,8 +944,10 @@ class WeightDistanceMemory:
         task_idx: int,
         assigned_gid: int,
         is_new_group: bool,
-        override_alpha: Optional[float] = None,   
+        override_alpha: Optional[float] = None,
         kl_final: Optional[float] = None,
+        fisher_new: Optional[Dict[str, Dict[str, torch.Tensor]]] = None,
+        task_probe: Optional[dict] = None,
     ) -> Tuple[int, bool]:
 
         iv_state = _extract_iv_state(reft_model)
@@ -618,6 +963,7 @@ class WeightDistanceMemory:
         t3_K = buckets["t3_l"]
         self.t3l_tasks[task_name] = {k: _clone_state(v) for k, v in t3_K.items()}
 
+        merge_info: Dict = {"rule": "new_group"}
         if is_new_group:
             assert assigned_gid not in self.groups
             self.groups[assigned_gid] = {
@@ -628,14 +974,49 @@ class WeightDistanceMemory:
             }
             if assigned_gid >= self._next_gid:
                 self._next_gid = assigned_gid + 1
+            if fisher_new:
+                self.group_fisher[assigned_gid] = accumulate_fisher(None, fisher_new)
         else:
             assert assigned_gid in self.groups
             g = self.groups[assigned_gid]
-            g["iv_state"] = {k: _clone_state(v) for k, v in groupwise_K.items()}
+            if self.group_is_full(assigned_gid):
+                print(f"  [capacity] WARNING: G{assigned_gid} already holds "
+                      f"{len(g['task_names'])} task(s) with cap="
+                      f"{self.group_capacity}; joining anyway "
+                      f"(routing bypassed the capacity filter).")
+            n_old = len(g["task_names"])
+            if self.merge_rule == "overwrite" or merge_group_state is None:
+                g["iv_state"] = {k: _clone_state(v) for k, v in groupwise_K.items()}
+                merge_info = {"rule": "overwrite", "alpha": 1.0}
+            else:
+                merged, merge_info = merge_group_state(
+                    g["iv_state"], groupwise_K,
+                    rule=self.merge_rule,
+                    ema_alpha=self.merge_ema_alpha,
+                    n_old=n_old,
+                    kl_final=kl_final,
+                    kl_scale=self.merge_kl_scale,
+                    fisher_new=fisher_new,
+                    fisher_old=self.group_fisher.get(assigned_gid),
+                )
+                g["iv_state"] = merged
+            if fisher_new:
+                self.group_fisher[assigned_gid] = accumulate_fisher(
+                    self.group_fisher.get(assigned_gid), fisher_new)
             g["task_names"].append(task_name)
             g["n_merged"] += 1
             if "kl_history" not in g:
                 g["kl_history"] = []
+            _a = merge_info.get("alpha", float("nan"))
+            print(f"  [merge] G{assigned_gid} ← '{task_name}'  "
+                  f"rule={merge_info.get('rule')}"
+                  f"{' (requested=' + merge_info['requested'] + ')' if merge_info.get('requested') else ''}  "
+                  f"mean_weight_on_new={_a:.4f}  "
+                  f"blended={merge_info.get('n_blended', 0)} "
+                  f"copied={merge_info.get('n_copied', 0)}"
+                  + (f"  [{merge_info['reason']}]" if merge_info.get("reason") else ""))
+        self.merge_log.append({"task": task_name, "gid": int(assigned_gid),
+                               "is_new_group": bool(is_new_group), **merge_info})
         if kl_final is not None and assigned_gid in self.groups:
             self.groups[assigned_gid]["kl_history"].append(float(kl_final))
 
@@ -643,6 +1024,12 @@ class WeightDistanceMemory:
         self.task_warmup_snapshots[task_name] = {
             k: _clone_state(v) for k, v in groupwise_K.items()
         }
+
+        # Retain this task's probe as part of the group's evidence, on CPU.
+        if task_probe is not None:
+            self.group_probes.setdefault(assigned_gid, []).append(
+                {k: (v.detach().cpu() if torch.is_tensor(v) else v)
+                 for k, v in task_probe.items()})
 
         g_now = self.groups[assigned_gid]
         n_groupwise_keys = len(groupwise_K)
@@ -1158,7 +1545,7 @@ def _probe_forward_logits(reft_model, probe_batch, top_k: int = 256,
         labels_full = full_b.get("labels", None)
         if labels_full is not None and torch.is_tensor(labels_full):
             labels_slice = labels_full[start:end].to(logits.device)
-            mask = (labels_slice != -100)
+            mask = _kl_mask(labels_slice, logits.device)
         else:
             mask = torch.ones(logits.shape[:2],
                               dtype=torch.bool, device=logits.device)
@@ -1171,6 +1558,66 @@ def _probe_forward_logits(reft_model, probe_batch, top_k: int = 256,
         del logits, outputs, top_vals, top_idx
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
+
+    top_vals = torch.cat(out_top_vals_chunks, dim=0)
+    top_idx  = torch.cat(out_top_idx_chunks, dim=0)
+    mask     = torch.cat(out_mask_chunks, dim=0)
+    return top_vals, top_idx, mask
+
+
+@torch.no_grad()
+def _probe_forward_logits_baseline(base_model, probe_batch, top_k: int = 256,
+                                   mini_batch_size: int = 8):
+    """Same chunked top-k extraction as _probe_forward_logits, but for the
+    frozen backbone with NO intervention applied (pi0). Needed for Eq. 4's
+    denominator max(min(D_K, D_G), eps), which requires each side's KL
+    distance from the untouched baseline -- not just D_KG between the two
+    intervened snapshots. Restores base_model's train/eval mode afterward
+    since, unlike the transient reft/lora wrappers, it is reused for the
+    rest of this task's training."""
+    was_training = base_model.training
+    base_model.eval()
+    full_b = dict(probe_batch)
+    total_B = full_b["input_ids"].shape[0]
+    mb = max(1, int(mini_batch_size))
+
+    out_top_vals_chunks, out_top_idx_chunks, out_mask_chunks = [], [], []
+    for start in range(0, total_B, mb):
+        end = min(start + mb, total_B)
+        b = {}
+        for key, val in full_b.items():
+            if torch.is_tensor(val) and val.dim() >= 1 and val.shape[0] == total_B:
+                b[key] = val[start:end]
+            elif isinstance(val, list) and len(val) == total_B:
+                b[key] = val[start:end]
+            else:
+                b[key] = val
+        b.pop("intervention_locations", None)
+        b.pop("subspaces", None)
+        b.pop("labels", None)
+        b["use_cache"] = False
+        outputs = base_model(**b)
+        logits = outputs.logits if hasattr(outputs, "logits") else outputs[0]
+
+        labels_full = full_b.get("labels", None)
+        if labels_full is not None and torch.is_tensor(labels_full):
+            labels_slice = labels_full[start:end].to(logits.device)
+            mask = _kl_mask(labels_slice, logits.device)
+        else:
+            mask = torch.ones(logits.shape[:2],
+                              dtype=torch.bool, device=logits.device)
+
+        k = min(int(top_k), logits.shape[-1])
+        top_vals, top_idx = logits.topk(k, dim=-1)
+        out_top_vals_chunks.append(top_vals.detach())
+        out_top_idx_chunks.append(top_idx.detach())
+        out_mask_chunks.append(mask.detach())
+        del logits, outputs, top_vals, top_idx
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+
+    if was_training:
+        base_model.train()
 
     top_vals = torch.cat(out_top_vals_chunks, dim=0)
     top_idx  = torch.cat(out_top_idx_chunks, dim=0)
@@ -1208,10 +1655,19 @@ def _kl_logits_distance(
     NEG_INF = float("-inf")
 
     def _gather_values_for_union(top_vals_X, top_idx_X, union_idx):
-        match = (union_idx.unsqueeze(-1) == top_idx_X.unsqueeze(-2))  
-        any_match = match.any(dim=-1)                                 
-        first_match = match.float().argmax(dim=-1)                    
-        gathered = torch.gather(top_vals_X, dim=-1, index=first_match)
+        # Exact index matching via searchsorted instead of the [B,T,2k,k]
+        # broadcast comparison. Identical results (top-k indices are unique
+        # within a row, so the match is unique), but memory is O(B*T*2k)
+        # rather than O(B*T*2k*k) -- at probe_size=16, T=1024, k=512 that is
+        # ~17M elements instead of ~8.6e9, which is what made top_k>256
+        # unusable and is why the snapshots were pinned at k=256.
+        sort_idx, order = top_idx_X.sort(dim=-1)
+        sort_vals = torch.gather(top_vals_X, dim=-1, index=order)
+        pos = torch.searchsorted(sort_idx.contiguous(),
+                                 union_idx.contiguous())
+        pos = pos.clamp_(max=sort_idx.shape[-1] - 1)
+        any_match = torch.gather(sort_idx, dim=-1, index=pos) == union_idx
+        gathered = torch.gather(sort_vals, dim=-1, index=pos)
         gathered = torch.where(any_match, gathered,
                                torch.full_like(gathered, NEG_INF))
         return gathered
@@ -1293,6 +1749,9 @@ def run_kl_routing_phase(
     temperature: float = 2.0,
     normalize: str = "raw",
     min_dkg: float = 0.01,
+    direction: str = "forward",
+    base_model_for_bwd=None,
+    task_probe: Optional[dict] = None,
 ):
     
     print(f"\n  [kl_routing] Task '{task_name}' against "
@@ -1332,8 +1791,56 @@ def run_kl_routing_phase(
         memory._routing_log.append(debug)
         return gid, True, debug
 
-    probe_batch = _build_current_task_probe(
-        train_dataset, tokenizer, probe_size, device_str)
+    # --group_capacity: groups already holding `capacity` tasks are not
+    # candidates. Filtering here also skips their probe forwards entirely.
+    candidate_gids = memory.open_gids()
+    if not candidate_gids:
+        gid = memory._next_gid
+        print(f"  [kl_routing] all {len(memory.groups)} group(s) at capacity "
+              f"({memory.group_capacity}); '{task_name}' → NEW GROUP "
+              f"(no KL probes run).")
+        debug = {
+            "task":              task_name,
+            "router_method":     "kl_routing",
+            "n_existing_groups": len(memory.groups),
+            "group_capacity":    memory.group_capacity,
+            "decision":          "new_group_capacity_full",
+            "assigned_gid":      gid,
+            "raw_kl_per_group":  {}, "distance_per_group": {},
+            "threshold":         float(kl_threshold),
+            "min_dkg":           float(min_dkg),
+            "normalize":         str(normalize),
+            "raw_distances":     {}, "normalized": {},
+            "group_n_tasks":     {str(g): len(v["task_names"])
+                                  for g, v in memory.groups.items()},
+            "group_task_names":  {str(g): list(v["task_names"])
+                                  for g, v in memory.groups.items()},
+            "per_tier": {}, "per_tier_raw": {}, "per_tier_n": {}, "per_tier_wn": {},
+            "closest_gid":       gid,
+            "closest_raw_dist":  float("nan"),
+            "closest_norm_dist": float("nan"),
+        }
+        memory._routing_log.append(debug)
+        return gid, True, debug
+    if len(candidate_gids) < len(memory.groups):
+        full = [g for g in sorted(memory.groups) if g not in candidate_gids]
+        print(f"  [kl_routing] capacity={memory.group_capacity}: skipping full "
+              f"group(s) {full}; candidates={candidate_gids}")
+
+    probe_batch = (task_probe if task_probe is not None else
+                   _build_current_task_probe(
+                       train_dataset, tokenizer, probe_size, device_str))
+
+    # Snapshots must retain at least as many logits as the routing top_k, or
+    # --kl_routing_top_k is silently clamped by k_use = min(top_k, k_snap)
+    # inside _kl_logits_distance. They used to be pinned at the k=256 default,
+    # which made every setting above 256 identical to 256.
+    probe_top_k = int(top_k) if top_k and int(top_k) > 0 else 256
+
+    # pi0 taken BEFORE any intervention wrapper for this task exists, so the
+    # baseline cannot be contaminated by a live reft model on the same backbone.
+    snap_0 = _probe_forward_logits_baseline(
+        base_model, probe_batch, top_k=probe_top_k)
 
     _set_intervention_seed(int(args.fixed_intervention_seed))
     warm_reft = _build_reft_model(
@@ -1349,10 +1856,21 @@ def run_kl_routing_phase(
         gradient_accumulation_steps=int(gradient_accumulation_steps),
     )
 
-    snap_K = _probe_forward_logits(warm_reft, probe_batch)
+    snap_K = _probe_forward_logits(warm_reft, probe_batch, top_k=probe_top_k)
+
+    # This task's KL-from-baseline. Needed for Eq. 4's ratio denominator
+    # max(min(D_K, D_G), eps) -- computed once, independent of how many groups
+    # exist, so it no longer degenerates to a fixed 1.0 whenever there's only
+    # one candidate group to compare against (the old d_max = max(D_KG among
+    # candidates) did exactly that).
+    D_K = _kl_logits_distance(snap_0, snap_K, temperature=temperature, top_k=top_k)
+    print(f"  [kl_routing] D_K (pi0 -> warmup) = {D_K:.4f}  "
+          f"(snapshot k={probe_top_k}, routing top_k={top_k})")
 
     raw_kl: Dict[int, float] = {}
-    for gid in sorted(memory.groups.keys()):
+    raw_dg: Dict[int, float] = {}
+    raw_bwd: Dict[int, float] = {}
+    for gid in candidate_gids:
         g = memory.groups[gid]
         n_tasks = len(g["task_names"])
         print(f"  [kl_routing] G{gid} (n={n_tasks}, tasks={g['task_names']}) "
@@ -1365,32 +1883,102 @@ def run_kl_routing_phase(
         _load_iv_state(g_reft, g["iv_state"])
 
         try:
-            snap_G = _probe_forward_logits(g_reft, probe_batch)
+            snap_G = _probe_forward_logits(g_reft, probe_batch, top_k=probe_top_k)
             D_KG = _kl_logits_distance(
                 snap_K, snap_G,
                 temperature=temperature, top_k=top_k)
             raw_kl[gid] = D_KG
+            raw_dg[gid] = _kl_logits_distance(
+                snap_0, snap_G,
+                temperature=temperature, top_k=top_k)
+            # --- incumbent-side (backward) score --------------------------
+            # Everything above is measured on the ARRIVING task's probe, so
+            # it can only see whether K and G agree where the newcomer lives.
+            # The damage that actually matters happens in the group's own
+            # distribution. Measured on the study's 56-pair matrix, the same
+            # numbers read in this direction rank interference at rho=0.517
+            # against rho=0.192 for the forward direction -- identical values,
+            # transposed, +0.33 rho for free.
+            #
+            # max over the group's members: joining must not hurt ANY of them.
+            if direction in ("backward", "both"):
+                member_probes = memory.group_probes.get(gid, [])
+                d_bwds = []
+                bwd_nums, bwd_dens = [], []
+                n_floored = 0
+                bwd_eps = float(getattr(args, "kl_routing_bwd_eps", 0.05))
+                for mp in member_probes:
+                    mp_dev = {k: (v.to(device_str) if torch.is_tensor(v) else v)
+                              for k, v in mp.items()}
+                    snap_G_own = _probe_forward_logits(g_reft, mp_dev, top_k=probe_top_k)
+                    snap_K_own = _probe_forward_logits(warm_reft, mp_dev, top_k=probe_top_k)
+                    d_raw = _kl_logits_distance(snap_G_own, snap_K_own,
+                                                temperature=temperature, top_k=top_k)
+                    # Eq. 4's ratio, in the incumbent's frame. The denominator
+                    # mirrors the forward metric: min(D_K, D_G) measured on the
+                    # MEMBER's data, with its own epsilon. Using min_dkg here
+                    # (0.01) let the ratio be scaled by up to 100x whenever a
+                    # group had barely moved from pi0 on its own probe.
+                    if base_model_for_bwd is not None:
+                        snap_0_own = _probe_forward_logits_baseline(
+                            base_model_for_bwd, mp_dev, top_k=probe_top_k)
+                        d_g_own = _kl_logits_distance(
+                            snap_0_own, snap_G_own,
+                            temperature=temperature, top_k=top_k)
+                        d_k_own = _kl_logits_distance(
+                            snap_0_own, snap_K_own,
+                            temperature=temperature, top_k=top_k)
+                        denom = min(d_k_own, d_g_own)
+                        if denom <= bwd_eps:
+                            n_floored += 1
+                        denom = max(denom, bwd_eps)
+                        del snap_0_own
+                    else:
+                        denom = 1.0
+                    bwd_nums.append(float(d_raw))
+                    bwd_dens.append(float(denom))
+                    d_bwds.append(d_raw / denom if denom > 0 else d_raw)
+                    del snap_G_own, snap_K_own, mp_dev
+                if d_bwds:
+                    # Ratio of sums, not mean/max of ratios: one member with a
+                    # near-zero denominator can no longer decide the score.
+                    raw_bwd[gid] = float(sum(bwd_nums) / max(sum(bwd_dens), bwd_eps))
+                    print(f"  [kl_routing] G{gid}  D_bwd={raw_bwd[gid]:.4f} "
+                          f"(ratio-of-sums over {len(d_bwds)} member probe(s); "
+                          f"per-probe max={max(d_bwds):.4f})")
+                    if n_floored:
+                        print(f"  [kl_routing] G{gid}  WARNING: {n_floored}/"
+                              f"{len(d_bwds)} member probe(s) hit the denominator "
+                              f"floor eps={bwd_eps} — D_bwd may be unreliable")
+                else:
+                    raw_bwd[gid] = float("nan")
+                    print(f"  [kl_routing] G{gid}  no stored member probe; "
+                          f"D_bwd unavailable.")
+
             print(f"  [kl_routing] G{gid}  D_KG={D_KG:.4f}")
         except Exception as e:
             print(f"  [kl_routing] G{gid} forward FAILED "
                   f"({type(e).__name__}: {e}); marking D_KG=inf.")
             raw_kl[gid] = float("inf")
+            raw_dg[gid] = float("inf")
+            raw_bwd[gid] = float("inf")
 
         try:
             _teardown_reft_model(g_reft)
         except Exception:
             pass
         del g_reft
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
+        # gc.collect as well: a torn-down model that sits in a reference cycle
+        # is not freed by empty_cache() alone and would stay on the GPU until
+        # the end-of-task collection, one more per group probed.
+        _release_gpu()
 
     try:
         _teardown_reft_model(warm_reft)
     except Exception:
         pass
     del warm_reft, snap_K
-    if torch.cuda.is_available():
-        torch.cuda.empty_cache()
+    _release_gpu()
 
     finite = {k: v for k, v in raw_kl.items()
               if v != float("inf") and not np.isnan(v)}
@@ -1406,21 +1994,60 @@ def run_kl_routing_phase(
         print(f"  [kl_routing] All forwards failed; allocating new group.")
     else:
         if str(normalize).lower() == "ratio":
-            d_max = max(finite.values())
-            if d_max > 0:
-                distance = {k: (v / d_max) for k, v in raw_kl.items()}
-            else:
-                distance = dict(raw_kl)
+            # Eq. 4: d(t,k) = D_KG_k / max(min(D_K, D_G_k), eps). Each
+            # candidate gets its OWN denominator (how far the new task and
+            # THAT group have each moved from the untouched baseline), not
+            # a value shared across candidates -- so a single-candidate
+            # comparison no longer collapses to a fixed 1.0 by construction.
+            distance = {}
+            for k, v in raw_kl.items():
+                dg = raw_dg.get(k, float("inf"))
+                denom = max(min(D_K, dg), float(min_dkg))
+                distance[k] = (v / denom) if denom > 0 else v
             for gid, d in distance.items():
                 print(f"  [kl_routing] G{gid}  distance(ratio)={d:.4f}  "
-                      f"(D_KG={raw_kl[gid]:.4f}  D_KG_max={d_max:.4f})")
+                      f"(D_KG={raw_kl[gid]:.4f}  D_K={D_K:.4f}  "
+                      f"D_G={raw_dg.get(gid, float('nan')):.4f})")
         else:
             distance = dict(raw_kl)
             for gid, d in distance.items():
                 print(f"  [kl_routing] G{gid}  distance(raw)={d:.4f}")
 
+        # --- direction selects which score gates the join -------------------
+        # forward  : legacy. distance measured on the arriving task's data.
+        # backward : distance measured on the group's own members' data. The
+        #            validated choice (rho 0.517 vs 0.192 on the 56-pair
+        #            interference matrix).
+        # both     : must pass on BOTH sides. Strictly more conservative, so
+        #            it raises K; use when forgetting matters more than
+        #            parameter savings.
+        if direction in ("backward", "both"):
+            usable_bwd = {k: v for k, v in raw_bwd.items()
+                          if v == v and v != float("inf")}
+            if not usable_bwd:
+                print(f"  [kl_routing] direction={direction} requested but no "
+                      f"member probes were available; falling back to forward.")
+            elif direction == "backward":
+                distance = dict(usable_bwd)
+                for gid, d in distance.items():
+                    print(f"  [kl_routing] G{gid}  distance(backward)={d:.4f}")
+                print(f"  [kl_routing] decision metric = backward "
+                      f"(--kl_routing_normalize={normalize} applies to the "
+                      f"forward score only and is NOT used here)")
+            else:  # both
+                distance = {k: max(distance.get(k, float("inf")),
+                                   usable_bwd.get(k, float("inf")))
+                            for k in set(distance) | set(usable_bwd)}
+                for gid, d in distance.items():
+                    print(f"  [kl_routing] G{gid}  distance(both)={d:.4f}  "
+                          f"(fwd={raw_kl.get(gid, float('nan')):.4f} "
+                          f"bwd={raw_bwd.get(gid, float('nan')):.4f})")
+
         finite_d = {k: v for k, v in distance.items()
                     if v != float("inf") and not np.isnan(v)}
+        if not finite_d:
+            finite_d = {k: v for k, v in dict(raw_kl).items()
+                        if v != float("inf") and not np.isnan(v)}
         closest_gid = min(finite_d, key=finite_d.get)
         closest_dist = finite_d[closest_gid]
         closest_raw_dkg = float(raw_kl[closest_gid])
@@ -1758,7 +2385,18 @@ class KLRazorController:
         running_mean_ema: float = 0.05,
         kl_mode: str = "output",
         rep_layer_indices: Optional[List[int]] = None,
+        beta_warmup_steps: int = 0,
+        beta_ramp_shape: str = "linear",
     ):
+        assert beta_ramp_shape in ("linear", "cosine"), \
+            f"bad beta_ramp_shape={beta_ramp_shape}"
+        self.beta_ramp_shape = str(beta_ramp_shape)
+        self._deferred_boundary_logged = False
+        # Plasticity ramp: beta_eff = beta * min(1, step / beta_warmup_steps).
+        # 0 = off (full anchor from step 0, the original behaviour). The point
+        # is to let a new task descend its own loss before retention starts
+        # pulling, which is where LA is lost in the beta dose-response.
+        self.beta_warmup_steps = max(0, int(beta_warmup_steps))
         self.shadow_reft = shadow_reft
         self.groupwise_iv_keys = set(groupwise_iv_keys)
         self.beta = float(beta)
@@ -1799,9 +2437,56 @@ class KLRazorController:
         self._task_loss_running_mean: Optional[float] = None
         self._kl_running_mean: Optional[float] = None
 
-    def set_first_epoch_boundary(self, step_idx: int):
+    def effective_beta(self, step_idx: int) -> float:
+        """beta after the plasticity ramp. Identical to self.beta once the
+        ramp is done, and identical at every step when the ramp is off.
+
+        linear: frac = t. Reaches full strength with a slope discontinuity in
+        the schedule (the loss stays continuous, and the KL term is already
+        divided by its running mean, so this is mild -- but it is a corner).
+        cosine: frac = (1 - cos(pi*t))/2. Flat at both ends, so the anchor
+        arrives gently and asymptotes into its cap with matching slope.
+        """
+        if self.beta_warmup_steps <= 0:
+            return float(self.beta)
+        t = min(1.0, max(0, int(step_idx)) / float(self.beta_warmup_steps))
+        frac = t if self.beta_ramp_shape == "linear" else 0.5 * (1.0 - np.cos(np.pi * t))
+        return float(self.beta) * float(frac)
+
+    def set_first_epoch_boundary(self, step_idx: int) -> bool:
+        """Freeze the early-stop / eviction threshold from the KL seen so far.
+
+        Returns False if the call was deferred, in which case the caller must
+        try again on a later step.
+
+        Deferred while the beta ramp is still running. The threshold is
+        mean+std of the KL history, and it is compared against the rolling
+        window of the steps that follow -- so both sides have to be measured
+        under the same anchor strength or the comparison is not like-for-like.
+        With 500 samples at batch 4 an epoch is 125 steps, so
+        --kl_beta_warmup_steps 300 would otherwise set the threshold from a
+        window where beta was ramping 0 -> 0.125 (KL rising fast, low mean,
+        wide std) and then judge steps trained at a stronger anchor against it.
+        The likely failure there is a spurious EARLY STOP, which costs the arm
+        training steps and so directly damages the LA it is meant to measure;
+        eviction proper also needs severity > threshold*1.3 within
+        eviction_early_steps of this boundary.
+
+        Deferring rather than disabling matters: gating eviction on
+        step > beta_warmup_steps (300) would skip the entire eviction window
+        (steps 125-155) for ramp300 only, silently turning off a mechanism
+        that stays live in every other arm.
+        """
         if self._first_epoch_end is not None:
-            return
+            return True
+        if self.beta_warmup_steps > 0 and step_idx < self.beta_warmup_steps:
+            if not self._deferred_boundary_logged:
+                print(f"  [KL] First epoch ended at step {step_idx}, but the "
+                      f"beta ramp runs to {self.beta_warmup_steps}; deferring "
+                      f"the early-stop/eviction threshold until the anchor is "
+                      f"at full strength.")
+                self._deferred_boundary_logged = True
+            return False
         self._first_epoch_end = int(step_idx)
         if len(self.kl_history) >= 5:
             arr = np.array(self.kl_history, dtype=np.float64)
@@ -1843,10 +2528,15 @@ class KLRazorController:
                           f"target={self.kl_target_contribution:.2f} → "
                           f"β: {self.beta:.4f} → {new_beta:.4f}")
                     self.beta = float(new_beta)
+        return True
 
     @staticmethod
     def _call_intervenable(reft_model, batch):
-        keep = ("input_ids", "attention_mask", "labels",
+        # No labels here: every caller computes its own loss on the label
+        # rows. With labels, the model also builds a full-vocabulary fp32
+        # cross-entropy over B x T x V that is never used; for Gemma's 256K
+        # vocabulary at 2048 tokens that is about 8 GB per forward pass.
+        keep = ("input_ids", "attention_mask",
                 "intervention_locations", "subspaces")
         b = {k: v for k, v in batch.items() if k in keep}
         iv_locs = b.pop("intervention_locations", None)
@@ -1867,15 +2557,37 @@ class KLRazorController:
         logits = outputs.logits if hasattr(outputs, "logits") else outputs[0]
         labels = inputs.get("labels", None)
         if labels is not None:
-            mask = (labels != -100).to(logits.device)
+            mask = _kl_mask(labels, logits.device)
         else:
             mask = torch.ones(logits.shape[:2],
                               dtype=torch.bool, device=logits.device)
+        # Keep only the label rows (N x V). The full B x T x V anchor logits
+        # would otherwise stay allocated through the live backward pass.
+        if mask.dim() == 2 and mask.shape == logits.shape[:2]:
+            return logits[mask.bool()].detach(), mask
         return logits.detach(), mask
 
     def compute_step_kl(self, live_logits: torch.Tensor,
                         anchor_logits: torch.Tensor,
                         label_mask: torch.Tensor) -> torch.Tensor:
+        # Same quantity as before (mean per-token KL over label positions),
+        # computed on the label rows only. The previous form materialised
+        # five B x T x V fp32 tensors before masking; at B=4, T=2048 and a
+        # 128K vocabulary that is about 4 GB each and runs out of memory.
+        # Same code as the CRAFT-LoRA copy.
+        rows = label_mask.to(live_logits.device).bool()
+        if rows.dim() == 2 and rows.shape == live_logits.shape[:2]:
+            n_rows = int(rows.sum().item())
+            if n_rows == 0:
+                return live_logits.float().sum() * 0.0
+            live_sel   = live_logits[rows]
+            anchor_sel = anchor_logits.to(live_logits.device)
+            if anchor_sel.dim() == 3:        # full B x T x V; otherwise already N x V
+                anchor_sel = anchor_sel[rows]
+            live_lp    = F.log_softmax(live_sel.float(),   dim=-1)
+            anchor_lp  = F.log_softmax(anchor_sel.float(), dim=-1)
+            kl_rows    = (anchor_lp.exp() * (anchor_lp - live_lp)).sum(dim=-1)
+            return kl_rows.sum() / float(n_rows)
         live_lp   = F.log_softmax(live_logits.float(),   dim=-1)
         anchor_lp = F.log_softmax(anchor_logits.float(), dim=-1)
         anchor_p  = anchor_lp.exp()
@@ -1956,7 +2668,15 @@ class KLRazorController:
             if rolling > self._threshold:
                 self.stop_requested = True
                 self.stop_step = int(step_idx)
+                # Eviction is only eligible once the beta ramp has finished.
+                # Redundant given that set_first_epoch_boundary() already
+                # defers past the ramp (so _first_epoch_end >= warmup), but
+                # stated explicitly so the invariant cannot be broken by a
+                # future change to where the boundary is set.
+                ramp_complete = (self.beta_warmup_steps <= 0
+                                 or step_idx >= self.beta_warmup_steps)
                 is_early = (self._first_epoch_end is not None
+                            and ramp_complete
                             and (step_idx - self._first_epoch_end)
                                 < self.eviction_early_steps)
                 severity = rolling / max(self._threshold, 1e-8)
@@ -2017,17 +2737,19 @@ class KLRazorController:
             anchor_logits = shadow_out.logits if hasattr(shadow_out, "logits") else shadow_out[0]
             labels = batch.get("labels", None)
             if labels is not None:
-                mask = (labels != -100).to(live_logits.device)
+                mask = _kl_mask(labels, live_logits.device)
             else:
                 mask = torch.ones(live_logits.shape[:2],
                                   dtype=torch.bool, device=live_logits.device)
-            live_lp   = F.log_softmax(live_logits.float(),   dim=-1)
-            anchor_lp = F.log_softmax(anchor_logits.float(), dim=-1)
-            anchor_p  = anchor_lp.exp()
-            kl_per_tok = (anchor_p * (anchor_lp - live_lp)).sum(dim=-1)
-            mask_f = mask.to(kl_per_tok.dtype)
-            total_kl     += float((kl_per_tok * mask_f).sum().item())
-            total_tokens += int(mask_f.sum().item())
+            # Label rows only, as in compute_step_kl: same value, far less memory.
+            rows = mask.bool()
+            n_rows = int(rows.sum().item())
+            if n_rows > 0:
+                live_lp   = F.log_softmax(live_logits[rows].float(),   dim=-1)
+                anchor_lp = F.log_softmax(anchor_logits[rows].float(), dim=-1)
+                kl_rows   = (anchor_lp.exp() * (anchor_lp - live_lp)).sum(dim=-1)
+                total_kl     += float(kl_rows.sum().item())
+                total_tokens += n_rows
             n_used += 1
             del live_out, shadow_out, live_logits, anchor_logits
             if torch.cuda.is_available():
@@ -2090,13 +2812,16 @@ class MoIReftTrainer(ReftTrainerForCausalLM):
 
         labels = inputs.get("labels", None)
         if labels is not None and live_logits is not None:
-            shift_logits = live_logits[..., :-1, :].contiguous().float()
-            shift_labels = labels[..., 1:].contiguous().to(shift_logits.device)
-            task_loss = F.cross_entropy(
-                shift_logits.view(-1, shift_logits.size(-1)),
-                shift_labels.view(-1),
-                ignore_index=-100,
-            )
+            # Same value as cross-entropy over every position with
+            # ignore_index=-100 (the mean over target tokens), computed on the
+            # target rows only instead of an fp32 copy of all B x T x V logits.
+            shift_labels = labels[..., 1:].to(live_logits.device)
+            tgt = shift_labels != -100
+            if bool(tgt.any()):
+                task_loss = F.cross_entropy(
+                    live_logits[..., :-1, :][tgt].float(), shift_labels[tgt])
+            else:
+                task_loss = live_logits.float().sum() * 0.0
 
         total_loss  = task_loss
 
@@ -2134,8 +2859,13 @@ class MoIReftTrainer(ReftTrainerForCausalLM):
                 step_idx=self.state.global_step,
                 task_loss=float(task_loss.detach().item()),
             )
-            total_loss = task_loss + kl_ctrl.beta * kl_for_loss
+            beta_eff = kl_ctrl.effective_beta(self.state.global_step)
+            total_loss = task_loss + beta_eff * kl_for_loss
         except torch.cuda.OutOfMemoryError:
+            # KL_OOM_FATAL=1: stop the job. Otherwise the step silently trains
+            # without the anchor, and the task is no longer trained by CRAFT.
+            if os.environ.get("KL_OOM_FATAL", "") in ("1", "true", "True"):
+                raise
             print("  [KL] OOM on shadow forward; this step uses L_task only.")
             if torch.cuda.is_available(): torch.cuda.empty_cache()
         except Exception as e:
@@ -2145,8 +2875,10 @@ class MoIReftTrainer(ReftTrainerForCausalLM):
         if (not self._kl_first_epoch_recorded
                 and self.state.epoch is not None
                 and self.state.epoch >= 1.0):
-            kl_ctrl.set_first_epoch_boundary(self.state.global_step)
-            self._kl_first_epoch_recorded = True
+            # May defer while the beta ramp is still running; retry each step
+            # until it is accepted, so the threshold is measured at full anchor.
+            if kl_ctrl.set_first_epoch_boundary(self.state.global_step):
+                self._kl_first_epoch_recorded = True
 
         if return_outputs:
             return total_loss, live_out
@@ -2166,6 +2898,10 @@ class MoIReftTrainer(ReftTrainerForCausalLM):
             prepared_inputs = self._prepare_inputs(inputs)
             anchor_W_grads  = agem_prj.compute_anchor_W_grads(prepared_inputs)
         except torch.cuda.OutOfMemoryError:
+            # AGEM_OOM_FATAL=1: stop the job. Otherwise the step silently trains
+            # without the anchor, and the task is no longer trained by CRAFT.
+            if os.environ.get("AGEM_OOM_FATAL", "") in ("1", "true", "True"):
+                raise
             print(f"  [agem] OOM on shadow pass; skipping projection this step.")
             if torch.cuda.is_available(): torch.cuda.empty_cache()
             return super().training_step(model, inputs)
@@ -2212,8 +2948,10 @@ def finetune_cl(args):
     reset_logs()
     print("  [logger] All logs reset.")
 
+    global _KL_PRED_MASK
+    _KL_PRED_MASK = bool(getattr(args, "kl_pred_mask", False))
     kl_per_task_log = []
-    perf_matrix = {}        
+    perf_matrix = {}    
     task_to_group_log = {}  
 
     benchmark = getattr(args, "benchmark", "trace")
@@ -2236,9 +2974,42 @@ def finetune_cl(args):
     dtype = dtype_mapping[args.dtype]
     set_seed(args.seed)
 
-    n_pos    = getattr(args, "n_positions", 9)
-    task_pos = f"f{n_pos}+l{n_pos}"
-    print(f"  Position: {task_pos}  (same for all tasks, N={n_pos})")
+    # Stream position. --f_positions/--l_positions give the asymmetric form
+    # (e.g. f5+l25); with neither set it stays symmetric fN+lN from
+    # --n_positions, which is the old behaviour unchanged.
+    n_pos = int(getattr(args, "n_positions", 9))
+    f_pos = getattr(args, "f_positions", None)
+    l_pos = getattr(args, "l_positions", None)
+    if f_pos is None and l_pos is None:
+        f_pos = l_pos = n_pos
+    else:
+        f_pos = int(f_pos) if f_pos is not None else n_pos
+        l_pos = int(l_pos) if l_pos is not None else n_pos
+    assert f_pos > 0 and l_pos > 0, (
+        f"--f_positions/--l_positions must both be > 0 (got f={f_pos}, l={l_pos}). "
+        f"Interventions are built as base_layers x {LAYER_MULT} (one f-stream and "
+        f"one l-stream per layer), so a single-stream position string would not "
+        f"match len(task_layers).")
+    task_pos = f"f{f_pos}+l{l_pos}"
+
+    def _parse_task_map(spec, cast):
+        out = {}
+        for item in (spec or "").split(","):
+            if ":" in item:
+                k, v = item.split(":", 1)
+                out[k.strip()] = cast(v.strip())
+        return out
+    per_task_maxlen = _parse_task_map(getattr(args, "per_task_max_length", None), int)
+    per_task_pos    = _parse_task_map(getattr(args, "per_task_positions", None), str)
+    for _t, _p in per_task_pos.items():
+        _ok = (_p.startswith("f") and "+l" in _p
+               and _p[1:].split("+l")[0].isdigit()
+               and _p.split("+l")[1].isdigit())
+        assert _ok, f"--per_task_positions {_t}:{_p} must look like fN+lM"
+    print(f"  Position: {task_pos}  (f={f_pos}, l={l_pos})"
+          + (f"  overrides={per_task_pos}" if per_task_pos else ""))
+    if per_task_maxlen:
+        print(f"  Max length: {args.max_length}  overrides={per_task_maxlen}")
 
     tokenizer = AutoTokenizer.from_pretrained(
         args.model, model_max_length=args.max_length,
@@ -2259,6 +3030,10 @@ def finetune_cl(args):
         tokenizer.pad_token = tokenizer.eos_token
         print(f"  [pad-token] Mistral detected: pad_token set to eos_token "
               f"(id={tokenizer.pad_token_id}) to avoid unk-id-0 collision.")
+        if getattr(args, "mistral_system_first_turn", False):
+            tokenizer.chat_template = MISTRAL_CHAT_TEMPLATE
+            print("  [chat-template] Mistral: system prompt placed in the first "
+                  "user turn (prompt is a prefix of prompt+answer).")
     elif tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.unk_token
 
@@ -2277,6 +3052,7 @@ def finetune_cl(args):
                    [int(l) for l in args.layers.split(";")] if args.layers != "all" else
                    list(range(base_model.config.num_hidden_layers)))
     task_layers = _get_task_layers(base_layers)
+
 
     intervention_cls = intervention_mapping[args.intervention_type]
     iv_dtype         = torch.bfloat16 if isinstance(dtype, str) else dtype
@@ -2315,6 +3091,17 @@ def finetune_cl(args):
     flat_vote_quantile = float(getattr(args,"flat_vote_quantile",  0.5))
     vote_max_dist      = float(getattr(args, "vote_max_dist",      0.20))
 
+    group_capacity  = int(getattr(args, "group_capacity", 0) or 0)
+    merge_rule      = str(getattr(args, "merge_rule", "overwrite")).lower()
+    merge_ema_alpha = float(getattr(args, "merge_ema_alpha", 0.5))
+    merge_kl_scale  = float(getattr(args, "merge_kl_scale", 1.0))
+    _halflife = getattr(args, "merge_kl_halflife", None)
+    if _halflife is not None:
+        merge_kl_scale = kl_scale_from_halflife(_halflife)
+        print(f"  [merge] kl half-life {_halflife} → merge_kl_scale "
+              f"{merge_kl_scale:.4g} (overrides --merge_kl_scale)")
+    merge_fisher_batches = int(getattr(args, "merge_fisher_batches", 8))
+
     memory = WeightDistanceMemory(
         tier1_set, tier2_set, tier3_set,
         group_alpha            = group_alpha,
@@ -2326,7 +3113,24 @@ def finetune_cl(args):
         flat_aggregator        = flat_aggregator,
         flat_vote_quantile     = flat_vote_quantile,
         vote_max_dist          = vote_max_dist,
+        group_capacity         = group_capacity,
+        merge_rule             = merge_rule,
+        merge_ema_alpha        = merge_ema_alpha,
+        merge_kl_scale         = merge_kl_scale,
     )
+
+    # Trainable task-identity router (router_head.py). Lives beside the
+    # memory; refit at every commit; never touches the interventions.
+    router_head = None
+    memory.router_head = None
+    if getattr(args, "router_head", False):
+        router_head = RouterHead(layer_ids=_unique_layers(task_layers),
+                                 n_pos=l_pos, l2=args.router_head_l2,
+                                 iters=args.router_head_iters,
+                                 prompt_only=bool(getattr(args, "router_head_prompt_only", False)))
+        print(f"  [router_head] enabled: layers={router_head.layer_ids} "
+              f"n_pos={l_pos} samples/task={args.router_head_samples} "
+              f"prompt_only={router_head.prompt_only}")
 
     memory.all_groupwise = args.all_groupwise
 
@@ -2352,7 +3156,12 @@ def finetune_cl(args):
     print(f"  fixed_seed : {fixed_seed}  (same LoReFT init for every task)")
     print(f"  stratify   : T1={len(tier1_layers)} T2={len(tier2_layers)} T3={len(tier3_layers)}  "
           f"(used only for storage/EMA; routing is per-iv flat)")
-    print(f"  position   : {task_pos}  (fN+lN, N={n_pos})")
+    print(f"  position   : {task_pos}  (f={f_pos}, l={l_pos})")
+    print(f"  group_cap  : {group_capacity if group_capacity > 0 else 'uncapped'}")
+    print(f"  merge_rule : {merge_rule}"
+          + (f"  fisher_batches={args.merge_fisher_batches}" if merge_rule == "fisher" else "")
+          + (f"  kl_scale={args.merge_kl_scale}" if merge_rule == "kl" else "")
+          + (f"  ema_alpha={args.merge_ema_alpha}" if merge_rule == "ema" else ""))
 
     if getattr(args, "per_task_epochs", None):
         raw = [int(e) for e in args.per_task_epochs.split(",")]
@@ -2368,16 +3177,143 @@ def finetune_cl(args):
     cl_eval_sets: Dict[str, dict] = {}
     routing_log: List[dict] = []
 
+    resume_upto: Optional[int] = None
+    resume_rng = None
+    if getattr(args, "resume_from", None):
+        _st = _load_resume_state(args.resume_from, CL_ORDER)
+        resume_upto       = int(_st["completed_task_idx"])
+        perf_matrix       = _st["perf_matrix"]
+        kl_per_task_log   = _st["kl_per_task_log"]
+        task_to_group_log = _st["task_to_group_log"]
+        routing_log       = _st["routing_log"]
+        memory            = _st["memory"]
+        router_head       = _st["router_head"]
+        memory.router_head = router_head
+        resume_rng        = _st.get("rng")
+        del _st
+        print(f"  [resume] restored state after task {resume_upto + 1}/{n_tasks} "
+              f"('{CL_ORDER[resume_upto]}'); groups={memory.task_to_group}")
+
     os.makedirs(args.output_dir, exist_ok=True)
+    if resume_upto is not None and (args.skip_eval or args.save_eval_snapshots):
+        # A continued run writes into a new output folder. Bring the per-task
+        # snapshots of the tasks already done, so this folder holds all of them
+        # and can be evaluated later (--eval_only needs one snapshot per task).
+        import shutil
+        _n = 0
+        for _i in range(resume_upto + 1):
+            _src = _eval_snapshot_path(args.resume_from, _i, CL_ORDER[_i])
+            _dst = _eval_snapshot_path(args.output_dir, _i, CL_ORDER[_i])
+            if os.path.isfile(_src) and not os.path.isfile(_dst):
+                os.makedirs(os.path.dirname(_dst), exist_ok=True)
+                shutil.copy2(_src, _dst)
+                _n += 1
+        print(f"  [resume] copied {_n} evaluation snapshot(s) of tasks 1-{resume_upto + 1} "
+              f"from {args.resume_from}")
+    _mode = ("eval_only" if args.eval_only else "train_only" if args.skip_eval else "train_and_eval")
+    try:
+        with open(os.path.join(args.output_dir,
+                               "eval_args.json" if args.eval_only else TRAIN_ARGS_FILE), "w") as f:
+            json.dump(vars(args), f, indent=2, default=str)
+    except Exception as e:
+        print(f"  [args] WARNING: could not write the argument file ({type(e).__name__}: {e})")
+    print(f"\n  Run mode : {_mode}" + (f"   (evaluating {args.eval_from})" if args.eval_only else ""))
+
+    def _row_eval(task_idx):
+        """Row task_idx of the performance matrix: the task just trained, or every
+        task so far with --per_task_bwd_eval. Uses the current memory state."""
+        task_name = CL_ORDER[task_idx]
+        print(f"\n  Backward evaluation after {task_name}:")
+        print(f"  {'Task':<15}  {'Score':>7}  {'Forgetting':>12}")
+        print(f"  {'-'*15}  {'-'*7}  {'-'*12}")
+
+        _release_gpu()
+        if torch.cuda.is_available():
+            _mem_before = torch.cuda.memory_allocated() / (1024**3)
+            print(f"  [gpu_mem] before backward-eval: {_mem_before:.2f} GiB allocated")
+
+        with torch.no_grad():
+            eval_range = (range(task_idx + 1) if args.per_task_bwd_eval else [task_idx])
+            for eval_idx in eval_range:
+                eval_task = CL_ORDER[eval_idx]
+                ev_info   = cl_eval_sets[eval_task]
+
+                eval_reft = _build_reft_model(
+                    base_model, task_layers, args.rank,
+                    intervention_cls, iv_dtype, args)
+
+                loaded = route_and_load(
+                    eval_reft, eval_task, memory, base_model, tokenizer,
+                    args, ev_info["dataset"],
+                    build_reft_fn=lambda: _build_reft_model(
+                        base_model, task_layers, args.rank,
+                        intervention_cls, iv_dtype, args),
+                    teardown_fn=_teardown_reft_model)
+                if not loaded:
+                    perf_matrix[task_idx][eval_idx] = 0.0
+                    _teardown_reft_model(eval_reft)
+                    del eval_reft
+                    _release_gpu()
+                    continue
+
+                eval_reft.eval()
+                try:
+                    score = evaluate_reft_on_task(
+                        eval_task, eval_reft, tokenizer,
+                        ev_info["dataset"], ev_info["data_items"],
+                        args.eval_batch_size, args.greedy_decoding,
+                        args.temperature, args.top_p, args.top_k)
+                finally:
+                    _teardown_reft_model(eval_reft)
+                    del eval_reft
+                    _release_gpu()
+                perf_matrix[task_idx][eval_idx] = score
+
+                fgt_str = ("  (just trained)" if eval_idx == task_idx else
+                           f"{perf_matrix[eval_idx][eval_idx]-score:+.4f}"
+                           if perf_matrix[eval_idx][eval_idx] is not None
+                           else "     N/A")
+                print(f"  {eval_task:<15}  {score:>7.4f}  {fgt_str:>12}")
+
+        if torch.cuda.is_available():
+            _mem_after = torch.cuda.memory_allocated() / (1024**3)
+            print(f"  [gpu_mem] after backward-eval:  {_mem_after:.2f} GiB allocated")
+
+        if args.inference_router not in ("oracle", "litar"):   # litar writes its own log
+            agn_dump_report(args.output_dir)
+
+        if task_idx > 0:
+            fgt_list = [perf_matrix[j][j] - perf_matrix[task_idx][j]
+                        for j in range(task_idx)
+                        if (perf_matrix[j][j] is not None and
+                            perf_matrix[task_idx][j] is not None)]
+            if fgt_list:
+                print(f"\n  Mean forgetting: {float(np.mean(fgt_list)):+.4f}")
 
     for task_idx, task_name in enumerate(CL_ORDER):
         n_epochs = epoch_schedule[task_name]
+        if torch.cuda.is_available():
+            torch.cuda.reset_peak_memory_stats()
+        if (resume_upto is not None and task_idx == resume_upto + 1
+                and resume_rng is not None):
+            import random
+            torch.set_rng_state(resume_rng["torch"])
+            if resume_rng.get("cuda") is not None and torch.cuda.is_available():
+                torch.cuda.set_rng_state_all(resume_rng["cuda"])
+            np.random.set_state(resume_rng["numpy"])
+            random.setstate(resume_rng["python"])
         ref_type = TRACE_TASK_TYPES.get(task_name, 0)
         ref_name = TASK_TYPE_NAMES.get(ref_type, "?")
 
+        # per-task overrides (default: global values, unchanged behaviour)
+        task_pos_t   = per_task_pos.get(task_name, task_pos)
+        task_maxlen  = per_task_maxlen.get(task_name, args.max_length)
+        tokenizer.model_max_length = task_maxlen   # datasets truncate at build
+
         print(f"\n{'='*72}")
         print(f"  CL step {task_idx+1}/{n_tasks}:  {task_name}  "
-              f"[epochs={n_epochs}  pos={task_pos}]  (ref={ref_name})")
+              f"[epochs={n_epochs}  pos={task_pos_t}  max_len={task_maxlen}]  "
+              f"(ref={ref_name})")
         print(f"{'='*72}\n")
 
         train_path = os.path.join(CL_DATA_DIR, task_name, "train.json")
@@ -2386,7 +3322,7 @@ def finetune_cl(args):
         train_dataset = LoReftTRACEDataset(
             task_name, train_path, tokenizer, data_split="train",
             seed=args.seed, max_n_example=args.max_n_train_example,
-            num_interventions=len(task_layers), position=task_pos,
+            num_interventions=len(task_layers), position=task_pos_t,
             share_weights=args.share_weights, test_split="test",
             question_offset=question_offset)
         print(f"  Training samples: {len(train_dataset)}")
@@ -2414,21 +3350,54 @@ def finetune_cl(args):
         except Exception as _e:
             print(f"  [label-check] skipped (could not inspect labels: "
                   f"{type(_e).__name__}: {_e})")
-
-        ev_path = os.path.join(CL_DATA_DIR, task_name, "eval.json")
-        if not os.path.exists(ev_path):
+        _ev_file = getattr(args, "cl_eval_file", None)
+        ev_path = os.path.join(CL_DATA_DIR, task_name, _ev_file or "eval.json")
+        if _ev_file is None and not os.path.exists(ev_path):
             ev_path = os.path.join(CL_DATA_DIR, task_name, "test.json")
         assert os.path.exists(ev_path), f"Eval not found: {ev_path}"
+        print(f"  [eval] {task_name}: {os.path.basename(ev_path)}")
         ev_ds = LoReftTRACEDataset(
             task_name, ev_path, tokenizer, data_split="eval", seed=args.seed,
             max_n_example=args.max_n_eval_example,
-            num_interventions=len(task_layers), position=task_pos,
+            num_interventions=len(task_layers), position=task_pos_t,
             share_weights=args.share_weights,
             question_offset=question_offset)
         cl_eval_sets[task_name] = {
             "dataset": ev_ds, "data_items": ev_ds.raw_dataset,
         }
         print(f"  Eval set built: n={len(ev_ds)}")
+        tokenizer.model_max_length = args.max_length   # restore global limit
+
+        if args.eval_only:
+            # Evaluation only: the state after this task comes from the training
+            # run's snapshot; no training happens here.
+            _snap = _load_eval_snapshot(args.eval_from, task_idx, CL_ORDER)
+            memory            = _snap["memory"]
+            router_head       = _snap["router_head"]
+            memory.router_head = router_head
+            routing_log       = _snap["routing_log"]
+            kl_per_task_log   = _snap["kl_per_task_log"]
+            task_to_group_log = _snap["task_to_group_log"]
+            del _snap
+            print(f"  [eval-only] restored the state after '{task_name}' "
+                  f"({task_idx + 1}/{n_tasks}); groups={memory.task_to_group}")
+            _row_eval(task_idx)
+            continue
+
+        if resume_upto is not None and task_idx <= resume_upto:
+            # Finished in the resumed run: its evaluation set is rebuilt above
+            # (needed for the final row), everything else comes from the state.
+            print(f"  [resume] '{task_name}' finished in the resumed run; not retrained.")
+            continue
+
+        # Built once per task and reused: the routing phase scores against it,
+        # and memory.save() retains it as the group's evidence so a LATER
+        # arrival can be scored on this task's data (--kl_routing_direction
+        # backward). Without retaining it, incumbent-side routing has nothing
+        # to measure against.
+        task_probe = _build_current_task_probe(
+            train_dataset, tokenizer,
+            int(getattr(args, "kl_routing_probe_size", 16)), device)
 
         warmup_end_state: Dict[str, dict] = {}
         assigned_gid: Optional[int] = None
@@ -2477,10 +3446,14 @@ def finetune_cl(args):
                 temperature=temperature_arg,
                 normalize=normalize_arg,
                 min_dkg=min_dkg_arg,
+                direction=str(getattr(args, "kl_routing_direction", "forward")),
+                base_model_for_bwd=base_model,
+                task_probe=task_probe,
             )
             print(f"\n  [Phase 1 complete] kl_routing for '{task_name}':")
             _print_routing_debug(routing_debug)
-            if torch.cuda.is_available(): torch.cuda.empty_cache()
+            _release_gpu()          # also frees the warm-up trainer
+            _gpu_mem("after routing")
 
         else:
             assigned_gid = memory._next_gid
@@ -2547,6 +3520,8 @@ def finetune_cl(args):
             anchor_iv_state = {
                 k: _clone_state(v) for k, v in memory.groups[assigned_gid]["iv_state"].items()
             }
+            _release_gpu()
+            _gpu_mem("before anchor build")
             shadow_reft_for_mem = _build_shadow_reft(
                 base_model, task_layers, args.rank,
                 intervention_cls, iv_dtype, args,
@@ -2609,6 +3584,8 @@ def finetune_cl(args):
                     beta_ceiling       = float(getattr(args, "kl_beta_ceiling", 1.0)),
                     kl_mode            = kl_mode,
                     rep_layer_indices  = rep_layer_indices,
+                    beta_warmup_steps  = int(getattr(args, "kl_beta_warmup_steps", 0)),
+                    beta_ramp_shape    = str(getattr(args, "kl_beta_ramp_shape", "linear")),
                 )
                 trainer.set_kl_controller(kl_controller)
                 trainer.set_agem_projector(None)
@@ -2734,7 +3711,9 @@ def finetune_cl(args):
                   f"threshold={stats['threshold']:.4f}")
 
             try:
-                eval_ds_for_kl = cl_eval_sets[task_name]["dataset"]
+                _kl_src = str(getattr(args, "merge_kl_source", "eval"))
+                eval_ds_for_kl = (train_dataset if _kl_src == "train"
+                                  else cl_eval_sets[task_name]["dataset"])
                 kl_eval_loader = torch.utils.data.DataLoader(
                     eval_ds_for_kl,
                     batch_size=args.eval_batch_size,
@@ -2746,9 +3725,13 @@ def finetune_cl(args):
                     max_batches=int(getattr(args, "kl_eval_batches", 50)),
                     device=device,
                 )
-                print(f"  [KL] Save-time KL_final on val (<=50 batches) = {kl_final:.4f}  "
-                      f"(diagnostic only — no blending)")
+                print(f"  [KL] Save-time KL_final on {_kl_src} split = {kl_final:.4f}  "
+                      f"(merge weight input when --merge_rule kl)")
             except Exception as e:
+                # KL_OOM_FATAL=1: stop the job. Otherwise kl_final=None and
+                # merge_rule kl silently falls back to overwrite for this task.
+                if os.environ.get("KL_OOM_FATAL", "") in ("1", "true", "True"):
+                    raise
                 print(f"  [KL] Save-time KL evaluation failed "
                       f"({type(e).__name__}: {e}).")
                 kl_final = None
@@ -2788,15 +3771,54 @@ def finetune_cl(args):
         for iv_list in reft_model.interventions.values():
             (iv_list[0] if isinstance(iv_list, (list, tuple)) else iv_list).eval()
 
+        # merge_rule=fisher needs this task's own parameter importance. Computed
+        # for new groups too, so the group carries an F_old into later merges.
+        fisher_new = None
+        if merge_rule == "fisher" and compute_iv_fisher is not None:
+            try:
+                fisher_new = compute_iv_fisher(
+                    reft_model, train_dataset, data_collator,
+                    n_batches=merge_fisher_batches,
+                    batch_size=args.batch_size,
+                    device=device, seed=args.seed)
+            except Exception as e:
+                print(f"  [fisher] computation failed "
+                      f"({type(e).__name__}: {e}); merge falls back to overwrite.")
+                fisher_new = None
+            reft_model.eval()
+
         final_gid, confirm_new = memory.save(
             reft_model, task_layers, task_name, task_idx,
             assigned_gid=assigned_gid, is_new_group=is_new_group,
-            kl_final=kl_final)
+            kl_final=kl_final, fisher_new=fisher_new,
+            task_probe=task_probe)
 
-        if args.inference_router == "prototype":
-            attach_group_prototype(memory, final_gid, base_model,
-                                   train_dataset, tokenizer, args,
-                                   probe_size=args.router_probe_size)
+        # LITAR (utils/litar_router.py): store this task's bank prompts, the same
+        # seeded draw as the head. Banks and classifiers are built only when
+        # --inference_router / --extra_eval_routers use litar.
+        try:
+            if getattr(memory, "litar", None) is None:
+                memory.litar = LitarRouter(layer_ids=_unique_layers(task_layers), n_pos=l_pos,
+                                           n_samples=args.router_head_samples,
+                                           l2=args.router_head_l2, iters=args.router_head_iters)
+            memory.litar.add_task(task_name, train_dataset, seed=args.seed + task_idx)
+        except Exception as e:
+            print(f"  [litar] WARNING: could not store bank prompts for {task_name} "
+                  f"({type(e).__name__}: {e}); LITAR cannot predict this task.")
+
+        if router_head is not None:
+            _dev = next(base_model.parameters()).device
+            _feats = features_from_dataset(
+                base_model, train_dataset, tokenizer, router_head.layer_ids,
+                router_head.n_pos, args.router_head_samples, _dev,
+                prompt_only=router_head.prompt_only,
+                seed=args.seed + task_idx)
+            router_head.add_task(task_name, _feats)
+            _rec = router_head.fit(device=_dev)
+            memory.router_head = router_head
+            print(f"  [router_head] refit after {task_name}: tasks={_rec['n_tasks']} "
+                  f"examples={_rec['n_examples']} train_acc={_rec['train_acc']} "
+                  f"holdout_acc={_rec['holdout_acc']}")
 
         routing_entry = {
             "task":         task_name,
@@ -2804,7 +3826,8 @@ def finetune_cl(args):
             "is_new_group": bool(confirm_new),
             "evicted":      bool(evicted_this_task),
             "ref_type":     ref_name,
-            "position":     task_pos,
+            "position":     task_pos_t,
+            "max_length":   task_maxlen,
             "routing_debug": routing_debug,
         }
         routing_log.append(routing_entry)
@@ -2815,10 +3838,14 @@ def finetune_cl(args):
         os.makedirs(ckpt_dir, exist_ok=True)
         reft_model.save(ckpt_dir)
         memory.save_to_disk(ckpt_dir)
+        if router_head is not None:
+            router_head.save(os.path.join(ckpt_dir, "router_head.pt"))
         with open(os.path.join(ckpt_dir, "routing_log.json"), "w") as f:
             json.dump(routing_log, f, indent=2)
         with open(os.path.join(ckpt_dir, "memory_summary.json"), "w") as f:
             json.dump(memory.get_summary(), f, indent=2)
+        with open(os.path.join(ckpt_dir, "merge_log.json"), "w") as f:
+            json.dump(memory.merge_log, f, indent=2)
         print(f"  Checkpoint saved → {ckpt_dir}")
 
         if kl_controller is not None:
@@ -2846,72 +3873,51 @@ def finetune_cl(args):
         del reft_model, trainer, optimizer, data_collator
         _release_gpu()
 
-        print(f"\n  Backward evaluation after {task_name}:")
-        print(f"  {'Task':<15}  {'Score':>7}  {'Forgetting':>12}")
-        print(f"  {'-'*15}  {'-'*7}  {'-'*12}")
+        if args.skip_eval:
+            print(f"\n  [train-only] evaluation of '{task_name}' deferred (--skip_eval).")
+        else:
+            _row_eval(task_idx)
 
-        _release_gpu()
-        if torch.cuda.is_available():
-            _mem_before = torch.cuda.memory_allocated() / (1024**3)
-            print(f"  [gpu_mem] before backward-eval: {_mem_before:.2f} GiB allocated")
+        _save_resume_state(args.output_dir, task_idx, CL_ORDER, perf_matrix,
+                           kl_per_task_log, task_to_group_log, routing_log,
+                           memory, router_head)
+        if args.skip_eval or args.save_eval_snapshots:
+            _save_eval_snapshot(args.output_dir, task_idx, CL_ORDER, kl_per_task_log,
+                                task_to_group_log, routing_log, memory, router_head)
 
-        with torch.no_grad():
-            eval_range = (range(task_idx + 1) if args.per_task_bwd_eval else [task_idx])
-            for eval_idx in eval_range:
-                eval_task = CL_ORDER[eval_idx]
-                ev_info   = cl_eval_sets[eval_task]
-
-                eval_reft = _build_reft_model(
-                    base_model, task_layers, args.rank,
-                    intervention_cls, iv_dtype, args)
-
-                loaded = route_and_load(
-                    eval_reft, eval_task, memory, base_model, tokenizer,
-                    args, ev_info["dataset"],
-                    build_reft_fn=lambda: _build_reft_model(
-                        base_model, task_layers, args.rank,
-                        intervention_cls, iv_dtype, args),
-                    teardown_fn=_teardown_reft_model)
-                if not loaded:
-                    perf_matrix[task_idx][eval_idx] = 0.0
-                    _teardown_reft_model(eval_reft)
-                    del eval_reft
-                    _release_gpu()
-                    continue
-
-                eval_reft.eval()
-                try:
-                    score = evaluate_reft_on_task(
-                        eval_task, eval_reft, tokenizer,
-                        ev_info["dataset"], ev_info["data_items"],
-                        args.eval_batch_size, args.greedy_decoding,
-                        args.temperature, args.top_p, args.top_k)
-                finally:
-                    _teardown_reft_model(eval_reft)
-                    del eval_reft
-                    _release_gpu()
-                perf_matrix[task_idx][eval_idx] = score
-
-                fgt_str = ("  (just trained)" if eval_idx == task_idx else
-                           f"{perf_matrix[eval_idx][eval_idx]-score:+.4f}"
-                           if perf_matrix[eval_idx][eval_idx] is not None
-                           else "     N/A")
-                print(f"  {eval_task:<15}  {score:>7.4f}  {fgt_str:>12}")
-
-        if torch.cuda.is_available():
-            _mem_after = torch.cuda.memory_allocated() / (1024**3)
-            print(f"  [gpu_mem] after backward-eval:  {_mem_after:.2f} GiB allocated")
-
-        if args.inference_router != "oracle":
-            agn_dump_report(args.output_dir)
-
-        if task_idx > 0:
-            fgt_list = [perf_matrix[j][j] - perf_matrix[task_idx][j]
-                        for j in range(task_idx)
-                        if (perf_matrix[j][j] is not None and
-                            perf_matrix[task_idx][j] is not None)]
-            if fgt_list:
-                print(f"\n  Mean forgetting: {float(np.mean(fgt_list)):+.4f}")
+    if args.skip_eval:
+        snaps = [_eval_snapshot_path(args.output_dir, i, CL_ORDER[i]) for i in range(n_tasks)]
+        have = [p_ for p_ in snaps if os.path.isfile(p_)]
+        print(f"\n{'='*72}")
+        print(f"  TRAIN-ONLY RUN COMPLETE  (evaluation deferred)")
+        print(f"{'='*72}")
+        print(f"  Snapshots : {len(have)}/{n_tasks} in {os.path.join(args.output_dir, EVAL_SNAPSHOT_DIR)}")
+        print(f"  Evaluate  : bash scripts/eval_later.sh {args.output_dir}")
+        print(f"  Groups Created                 {memory.n_groups()}")
+        print(f"\n  Routing log:")
+        for e in routing_log:
+            tag = "NEW" if e["is_new_group"] else "JOIN"
+            print(f"    {e['task']:<15}  G{e['gid']}  {tag:<4}  [ref={e['ref_type']}]")
+        print(f"\n  Group contents:")
+        for gid, g in memory.groups.items():
+            print(f"    G{gid}: {g['task_names']}  (n_merged={g['n_merged']})")
+        summary = {
+            "run_mode": "train_only",
+            "cl_order": list(CL_ORDER),
+            "complete": len(have) == n_tasks,
+            "snapshots": snaps,
+            "routing_log": routing_log,
+            "task_to_group": task_to_group_log,
+            "kl_per_task": kl_per_task_log,
+            "memory_summary": memory.get_summary(),
+            "merge_log": getattr(memory, "merge_log", None),
+            "n_groups": memory.n_groups(),
+        }
+        with open(os.path.join(args.output_dir, TRAIN_SUMMARY_FILE), "w") as f:
+            json.dump(summary, f, indent=2, default=str)
+        print(f"\n  Train summary saved → {os.path.join(args.output_dir, TRAIN_SUMMARY_FILE)}")
+        flush_log(args.output_dir)
+        return
 
     if not args.per_task_bwd_eval:
         print(f"\n{'='*72}")
@@ -2968,13 +3974,97 @@ def finetune_cl(args):
     diag     = [perf_matrix[j][j] for j in range(n_tasks)]
     last_row = [perf_matrix[T][j] for j in range(n_tasks)]
 
+    def _cl_metrics(final_row):
+        """OP  = mean of the final row (all tasks).
+        BWT = mean over the first T tasks of (final - diagonal); the last task
+              is excluded (its diff is 0 by definition). Negative = forgetting."""
+        _op = round(float(np.mean([x for x in final_row if x is not None])), 4)
+        _d  = [final_row[j] - diag[j] for j in range(T)
+               if diag[j] is not None and final_row[j] is not None]
+        _bwt = round(float(np.mean(_d)), 4) if _d else 0.0
+        return _op, _bwt
+
     forgetting = {CL_ORDER[j]: round(diag[j]-last_row[j], 4)
                   for j in range(n_tasks-1)
                   if diag[j] is not None and last_row[j] is not None}
     mf   = round(float(np.mean(list(forgetting.values()))), 4) if forgetting else 0.0
-    op   = round(float(np.mean([s for s in last_row if s is not None])), 4)
-    bwt  = round(float(np.mean([diag[j]-last_row[j] for j in range(n_tasks)
-                                if diag[j] is not None and last_row[j] is not None])), 4)
+    la   = round(float(np.mean([d for d in diag if d is not None])), 4)
+    op, bwt = _cl_metrics(last_row)
+
+    # Extra final rows: replay only the final evaluation row once per extra
+    # router, on the same end-of-stream memory. The primary --inference_router
+    # still drives the diagonal and the main OP/BWT above. BWT here is
+    # measured against that primary diagonal.
+    final_row_by_router = {}
+    extra_routers = [r for r in (args.extra_eval_routers or [])
+                     if r != args.inference_router]
+    _primary_router = args.inference_router
+    for _rtr in extra_routers:
+        print(f"\n{'='*72}")
+        print(f"  Extra final row  [router={_rtr}]")
+        print(f"{'='*72}")
+        args.inference_router = _rtr
+        _row = [None] * n_tasks
+        _release_gpu()
+        try:
+            with torch.no_grad():
+                for eval_idx in range(n_tasks):
+                    eval_task = CL_ORDER[eval_idx]
+                    ev_info   = cl_eval_sets[eval_task]
+                    eval_reft = _build_reft_model(
+                        base_model, task_layers, args.rank,
+                        intervention_cls, iv_dtype, args)
+                    loaded = route_and_load(
+                        eval_reft, eval_task, memory, base_model, tokenizer,
+                        args, ev_info["dataset"],
+                        build_reft_fn=lambda: _build_reft_model(
+                            base_model, task_layers, args.rank,
+                            intervention_cls, iv_dtype, args),
+                        teardown_fn=_teardown_reft_model)
+                    if not loaded:
+                        _teardown_reft_model(eval_reft)
+                        del eval_reft
+                        _release_gpu()
+                        _row[eval_idx] = 0.0
+                        print(f"  {eval_task:<15}  {0.0:>7.4f}  (no state)")
+                        continue
+                    eval_reft.eval()
+                    try:
+                        score = evaluate_reft_on_task(
+                            eval_task, eval_reft, tokenizer,
+                            ev_info["dataset"], ev_info["data_items"],
+                            args.eval_batch_size, args.greedy_decoding,
+                            args.temperature, args.top_p, args.top_k)
+                    finally:
+                        _teardown_reft_model(eval_reft)
+                        del eval_reft
+                        _release_gpu()
+                    _row[eval_idx] = score
+                    print(f"  {eval_task:<15}  {score:>7.4f}")
+        except Exception as e:
+            print(f"  [extra_router] {_rtr} failed ({type(e).__name__}: {e}); "
+                  f"skipping it.")
+            args.inference_router = _primary_router
+            continue
+        args.inference_router = _primary_router
+        _op, _bwt = _cl_metrics(_row)
+        print(f"  [{_rtr}]  OP {_op:.4f}   BWT {_bwt:+.4f}   "
+              f"(BWT vs the {_primary_router} diagonal)")
+        final_row_by_router[_rtr] = {
+            "final_row":           {CL_ORDER[j]: _row[j] for j in range(n_tasks)},
+            "overall_performance": _op,
+            "backward_transfer":   _bwt,
+        }
+    args.inference_router = _primary_router
+    if final_row_by_router:
+        final_row_by_router = {
+            _primary_router: {
+                "final_row":           {CL_ORDER[j]: last_row[j] for j in range(n_tasks)},
+                "overall_performance": op,
+                "backward_transfer":   bwt,
+            },
+            **final_row_by_router,
+        }
 
     col_w = 12
     header = f"{'Trained→':<18}" + "".join(f"{t[:10]:>{col_w}}" for t in CL_ORDER)
@@ -2986,11 +4076,18 @@ def finetune_cl(args):
                       for j in range(n_tasks))
         print(f"{CL_ORDER[i]:<18}{row}")
 
-    print(f"\n  {'Mean Forgetting':<30} {mf:+.4f}")
+    print(f"\n  {'Learning Accuracy (LA)':<30} {la:.4f}")
+    print(f"  {'Mean Forgetting':<30} {mf:+.4f}")
     print(f"  {'Overall Performance (OP)':<30} {op:.4f}")
     print(f"  {'Backward Transfer (BWT)':<30} {bwt:+.4f}")
     print(f"  {'Groups Created':<30} {memory.n_groups()}")
     print(f"{'='*72}")
+    if final_row_by_router:
+        print(f"\n  Final row by router (BWT vs {_primary_router} diagonal):")
+        print(f"  {'Router':<24}  {'OP':>7}  {'BWT':>8}")
+        for _r, _v in final_row_by_router.items():
+            print(f"  {_r:<24}  {_v['overall_performance']:>7.4f}  "
+                  f"{_v['backward_transfer']:>+8.4f}")
     print(f"\n  Routing log:")
     for e in routing_log:
         tag = "NEW" if e["is_new_group"] else "JOIN"
@@ -3021,9 +4118,15 @@ def finetune_cl(args):
         "final_row":           {CL_ORDER[j]: last_row[j] for j in range(n_tasks)},
         "forgetting_per_task": forgetting,
         "mean_forgetting":     mf,
+        "learning_accuracy":   la,
         "overall_performance": op,
         "backward_transfer":   bwt,
         "n_groups":            memory.n_groups(),
+        "inference_router":    _primary_router,
+        "final_row_by_router": final_row_by_router,
+        "run_mode":            ("eval_only" if args.eval_only else "train_and_eval"),
+        "eval_from":           args.eval_from if args.eval_only else None,
+        "eval_file":           getattr(args, "cl_eval_file", None),
     }
     
     results_path = os.path.join(args.output_dir, "cl_results.json")
@@ -3160,8 +4263,13 @@ def main():
     parser.add_argument("--n_positions",       type=int, default=9,
                         help="N in fN+lN position string. Same N for f and l, "
                              "same for all tasks. Default 9 → f9+l9.")
-    parser.add_argument("--position",          type=str, default="f7+l7",
-                        help="Ignored — use --n_positions instead.")
+    parser.add_argument("--f_positions",       type=int, default=None,
+                        help="Prefix (f) token count. Set together with "
+                             "--l_positions for an asymmetric position string "
+                             "(e.g. 5 + 25 -> f5+l25). Unset on both = "
+                             "symmetric fN+lN from --n_positions.")
+    parser.add_argument("--l_positions",       type=int, default=None,
+                        help="Suffix (l) token count. See --f_positions.")
     parser.add_argument("--intervention_type", type=str, default="LoreftIntervention")
     parser.add_argument("--share_weights",     action="store_true")
     parser.add_argument("--act_fn",            type=str,   default=None)
@@ -3210,6 +4318,17 @@ def main():
     parser.add_argument("--moi",                 action="store_true", default=True)
     parser.add_argument("--no_moi",              dest="moi", action="store_false")
     parser.add_argument("--per_task_epochs",     type=str, default=None)
+    parser.add_argument("--per_task_max_length", type=str, default=None,
+                        help="Per-task tokenizer limit, e.g. "
+                             "'MeetingBank:2048,Py150:2048'. Tasks not "
+                             "listed keep --max_length. Applied to that "
+                             "task's train and eval datasets only.")
+    parser.add_argument("--per_task_positions",  type=str, default=None,
+                        help="Per-task position string, e.g. "
+                             "'MeetingBank:f15+l40,Py150:f15+l40'. Tasks "
+                             "not listed keep the global fN+lM. Changes only "
+                             "which tokens are intervened, not the number "
+                             "of parameters.")
 
     parser.add_argument("--causal_warmup_steps",    type=int, default=100,
                         help="Warmup steps before routing.")
@@ -3221,6 +4340,11 @@ def main():
     parser.add_argument("--deep_frac",    type=float, default=0.38,
                         help="Fraction of layers in T3 (deep).")
 
+    parser.add_argument("--no_all_groupwise", dest="all_groupwise",
+                        action="store_false",
+                        help="Keep the T3 l-stream task-private (the default "
+                             "split). Use to override an earlier "
+                             "--all_groupwise on the same command line.")
     parser.add_argument("--all_groupwise", action="store_true", default=False,
                         help="Store T3_l at group level instead of per-task.")
 
@@ -3293,8 +4417,71 @@ def main():
                         help="Signal-floor: force new group when closest D_KG < this.")
     parser.add_argument("--kl_routing_top_k", type=int, default=64,
                         help="Top-k union for KL computation.")
+    parser.add_argument("--kl_routing_bwd_eps", type=float, default=0.05,
+                        help="Denominator floor for the backward routing "
+                             "distance. Separate from --kl_routing_min_dkg, "
+                             "which is the no-signal floor on raw D_KG.")
+    parser.add_argument("--kl_routing_direction", type=str, default="forward",
+                        choices=["forward", "backward", "both"],
+                        help="Whose data the routing distance is measured on. "
+                             "forward = the arriving task's (legacy). backward "
+                             "= the group members' own probes, i.e. how much "
+                             "the arrival would perturb what the group already "
+                             "knows. On the 56-pair interference matrix the "
+                             "same measurements read backward rank damage at "
+                             "rho=0.517 vs 0.192 forward. 'both' requires the "
+                             "join to pass on each side and so raises K.")
     parser.add_argument("--kl_routing_temperature", type=float, default=2.0,
                         help="Temperature for KL softmax smoothing.")
+    parser.add_argument("--group_capacity", type=int, default=0,
+                        help="Max tasks per group. <=0 = uncapped (default). "
+                             "Full groups are dropped from the routing "
+                             "candidate set, so a task that would have joined "
+                             "one opens a fresh group instead.")
+    parser.add_argument("--merge_rule", type=str, default="overwrite",
+                        choices=list(MERGE_RULES),
+                        help="How a joining task's trained state is combined "
+                             "with the existing group state. overwrite = new "
+                             "state wins (default, unchanged behaviour); ema, "
+                             "prototype, kl = scalar blends; fisher = "
+                             "per-parameter blend by diagonal empirical Fisher. "
+                             "Anything but overwrite needs merge_rules.py.")
+    parser.add_argument("--merge_fisher_batches", type=int, default=8,
+                        help="Minibatches of the task's own data used for the "
+                             "diagonal empirical Fisher (merge_rule=fisher).")
+    parser.add_argument("--merge_kl_scale", type=float, default=1.0,
+                        help="merge_rule=kl: weight on the new state is "
+                             "1/(1 + scale * kl_final). Low drift -> new state, "
+                             "high drift -> preserve the group state.")
+    parser.add_argument("--merge_kl_halflife", type=float, default=None,
+                        help="merge_rule=kl, interpretable form of "
+                             "--merge_kl_scale: the kl_final at which the "
+                             "group state and the new state get equal weight "
+                             "(scale = 1/halflife). Overrides --merge_kl_scale "
+                             "when set. Observed kl_final is ~0.03, so the "
+                             "default scale=1.0 (halflife=1.0) makes this rule "
+                             "identical to overwrite; try 0.01-0.10.")
+    parser.add_argument("--kl_pred_mask", action="store_true", default=False,
+                        help="Score the KL at the positions that predict answer "
+                             "tokens (shifted mask, as in the CE loss). Applies to "
+                             "the training KL, the save-time KL and the routing KL. "
+                             "Off = original mask, one position late.")
+    parser.add_argument("--merge_kl_source", type=str, default="eval",
+                        choices=["eval", "train"],
+                        help="Data for the save-time KL that sets the merge weight. "
+                             "eval = the task's evaluation file (original); "
+                             "train = its training split.")
+    parser.add_argument("--resume_from", type=str, default=None,
+                        help="Continue a crashed run: the previous run's output "
+                             "directory (or its resume_state.pt). Tasks it "
+                             "finished are not retrained.")
+    parser.add_argument("--cl_eval_file", type=str, default=None,
+                        choices=["eval.json", "test.json"],
+                        help="Evaluation file per task. Default: eval.json if "
+                             "present, else test.json (original).")
+    parser.add_argument("--merge_ema_alpha", type=float, default=0.5,
+                        help="merge_rule=ema: fixed weight on the new state.")
+
     parser.add_argument("--tier1_alpha",        type=float, default=0.30)
     parser.add_argument("--group_alpha",        type=float, default=0.50,
                         help="EMA alpha for merging trained weights into group.")
@@ -3305,6 +4492,19 @@ def main():
                         help="Disable KL-Razor (plain SFT).")
     parser.add_argument("--use_agem", action="store_true", default=False,
                         help="Use A-GEM gradient projection instead of KL-Razor.")
+    parser.add_argument("--kl_beta_warmup_steps", type=int, default=0,
+                        help="Ramp the KL anchor linearly over the first N "
+                             "optimizer steps of each task "
+                             "(beta_eff = beta * min(1, step/N)). 0 = off, "
+                             "i.e. full anchor from step 0 (original). Buys "
+                             "plasticity on the new task without lowering the "
+                             "final beta that protects earlier tasks.")
+    parser.add_argument("--kl_beta_ramp_shape", type=str, default="linear",
+                        choices=["linear", "cosine"],
+                        help="Shape of the --kl_beta_warmup_steps ramp. "
+                             "cosine is flat at both ends; linear reaches the "
+                             "cap with a slope discontinuity. Only meaningful "
+                             "when --kl_beta_warmup_steps > 0.")
     parser.add_argument("--kl_beta", type=float, default=0.1,
                         help="KL regularisation coefficient β.")
     parser.add_argument("--kl_early_stop", action="store_true", default=True,
@@ -3350,17 +4550,78 @@ def main():
 
     parser.add_argument("--per_task_bwd_eval", action="store_true",
                         help="Evaluate all prior tasks after each training step.")
-    parser.add_argument("--inference_router", type=str, default="oracle",
-                        choices=["oracle", "subspace_energy",
-                                 "perplexity", "prototype"],
-                        help="Group selection at eval time. 'oracle' = "
-                             "task_to_group lookup (default, unchanged); "
-                             "others infer the group from eval data only.")
+    parser.add_argument("--mistral_system_first_turn", action="store_true",
+                        help="Mistral only: use MISTRAL_CHAT_TEMPLATE so the "
+                             "prompt is a prefix of prompt+answer. Off by "
+                             "default (original behaviour for every model).")
+    parser.add_argument("--inference_router", type=str.lower, default="oracle",
+                        choices=["oracle", "litar", "learned_head"],
+                        help="Group selection at eval time (case-insensitive). "
+                             "'oracle' = task_to_group lookup (default); "
+                             "'litar' = task identified through the learned group "
+                             "interventions (utils/litar_router.py); "
+                             "'learned_head' = task head on frozen-base features "
+                             "(utils/router_head.py, needs --router_head).")
+    parser.add_argument("--extra_eval_routers", type=str.lower, nargs="*", default=[],
+                        choices=["oracle", "litar", "learned_head"],
+                        help="After the stream, replay the final evaluation "
+                             "row once per router listed here (in addition "
+                             "to --inference_router). Results go to "
+                             "cl_results.json['final_row_by_router'].")
     parser.add_argument("--router_probe_size", type=int, default=16,
                         help="Eval examples used per task-agnostic routing "
                              "decision.")
+    parser.add_argument("--router_head", action="store_true", default=False,
+                        help="Train a task-identity router head during the "
+                             "stream (router_head.py). At every task commit "
+                             "the head is refit on stored frozen-base features "
+                             "of all tasks so far, and saved as "
+                             "router_head.pt in the checkpoint. Off by default.")
+    parser.add_argument("--router_head_samples", type=int, default=64,
+                        help="Training examples per task banked for the head (and for LITAR).")
+    parser.add_argument("--router_head_l2", type=float, default=1e-2,
+                        help="L2 strength for the head's logistic regression (and LITAR's).")
+    parser.add_argument("--router_head_prompt_only", action="store_true", default=False,
+                        help="Build the head's feature bank from prompt tokens only "
+                             "(labels == -100). Saved in router_head.pt, so inference "
+                             "follows it. Off = original behaviour.")
+    parser.add_argument("--router_head_iters", type=int, default=200,
+                        help="LBFGS iterations per refit (head and LITAR).")
+
+    parser.add_argument("--skip_eval", action="store_true", default=False,
+                        help="Train only: skip the per-task and final evaluation, keep a "
+                             "snapshot after every task (eval_snapshots/) and write "
+                             "train_summary.json. Evaluate later with --eval_only.")
+    parser.add_argument("--save_eval_snapshots", action="store_true", default=False,
+                        help="In a normal train+eval run, also keep the per-task snapshots, "
+                             "so the run can be evaluated again later (another split, or "
+                             "the full lower triangle).")
+    parser.add_argument("--eval_only", action="store_true", default=False,
+                        help="Evaluation only, from the snapshots of a training run "
+                             "(--eval_from). Training settings come from its "
+                             "train_args.json; give only evaluation settings here.")
+    parser.add_argument("--eval_from", type=str, default=None,
+                        help="Training output directory for --eval_only.")
+    parser.add_argument("--no_per_task_bwd_eval", dest="per_task_bwd_eval", action="store_false",
+                        default=argparse.SUPPRESS,
+                        help="--eval_only: evaluate the diagonal and final row only, even if "
+                             "the training run asked for the full lower triangle.")
 
     args = parser.parse_args()
+
+    if args.eval_only and args.skip_eval:
+        raise SystemExit("--eval_only and --skip_eval cannot be combined.")
+    if args.eval_only:
+        args = _restore_train_args(args)
+
+    if str(args.merge_rule).lower() != "overwrite" and not _HAS_MERGE_RULES:
+        raise SystemExit(
+            f"--merge_rule={args.merge_rule} needs merge_rules.py alongside "
+            f"train.py, but the import failed: {_merge_import_err}")
+    if (args.f_positions is None) != (args.l_positions is None):
+        print(f"  [warn] only one of --f_positions/--l_positions was given; "
+              f"the missing one defaults to --n_positions={args.n_positions}.")
+
     col = max(len(k) for k in vars(args)) + 2
     print("\n" + "=" * 70)
     print("  CRAFT-CL [Weight-Distance Routing]  --  Config")
@@ -3370,7 +4631,13 @@ def main():
     print("=" * 70 + "\n")
 
     if args.continual_learning:
-        finetune_cl(args)
+        try:
+            finetune_cl(args)
+        except Exception as e:
+            if isinstance(e, getattr(torch, "OutOfMemoryError", ())) or \
+                    "out of memory" in str(e).lower():
+                _print_cuda_census()
+            raise
 
 if __name__ == "__main__":
     main()

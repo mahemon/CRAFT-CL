@@ -7,8 +7,8 @@ import transformers
 from datasets import load_dataset
 from collections import defaultdict
 from copy import deepcopy
-from task_config import task_config
-from templates import *
+from utils.task_config import task_config
+from utils.templates import *
 
 from pyreft import ReftDataset
 
